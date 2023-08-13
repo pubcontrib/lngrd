@@ -1,0 +1,17 @@
+#!/bin/sh
+PROGRAM=$1
+
+write_status()
+{
+    status=$1
+    color=$2
+
+    if [ -z "$NO_COLOR" ]
+    then
+        printf '\033[7;%dm %s \033[0m\n' $color "$status" 1>&2
+    else
+        printf '[%s]\n' "$status" 1>&2
+    fi
+}
+
+write_status 'PASS' 32
