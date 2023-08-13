@@ -14,4 +14,69 @@ write_status()
     fi
 }
 
+write_detail()
+{
+    header=$1
+    value=$2
+
+    if [ -z "$NO_COLOR" ]
+    then
+        printf '\033[1m%s:\033[0m\n%s\n' "$header" "$value" 1>&2
+    else
+        printf '%s:\n%s\n' "$header" "$value" 1>&2
+    fi
+}
+
+test_code()
+{
+    source=$1
+    expected_output=$2
+    expected_exit=$3
+
+    actual_output="`$PROGRAM -t "$source"`"
+    actual_exit=$?
+
+    if [ "$actual_exit" != "$expected_exit" ]
+    then
+        write_status 'FAIL' 31
+        write_detail 'Reason' 'an unexpected exit code was returned'
+        write_detail 'Source' "$source"
+        write_detail 'Actual' "$actual_exit"
+        write_detail 'Expected' "$expected_exit"
+
+        exit 1
+    fi
+
+    if [ "$actual_output" != "$expected_output" ]
+    then
+        write_status 'FAIL' 31
+        write_detail 'Reason' 'an unexpected output was returned'
+        write_detail 'Source' "$source"
+        write_detail 'Actual' "$actual_output"
+        write_detail 'Expected' "$expected_output"
+
+        exit 1
+    fi
+}
+
+test_code '' '' 0
+test_code ' ' '' 0
+test_code '
+' '' 0
+test_code '#comment' '' 0
+test_code '""' '' 0
+test_code '"text"' '' 0
+test_code '@write' '' 0
+test_code '(@write "/dev/stdout" "")' '' 0
+test_code '(@write "/dev/stdout" "text")' 'text' 0
+test_code '(@write "/dev/stdout" "1") (@write "/dev/stdout" "2") (@write "/dev/stdout" "3")' '123' 0
+test_code '(@write "/dev/stdout" (@write "/dev/stdout" "text"))' 'text' 0
+test_code '(@write"/dev/stdout""text")' 'text' 0
+test_code '(@write)' '' 1
+test_code '(@write "/dev/stdout")' '' 1
+test_code '(@write @write @write)' '' 1
+test_code '(@write "/dev/stdout" "1") @invalid (@write "/dev/stdout" "2")' '1' 1
+test_code '(@write "/dev/stdout" "text" "extra")' 'text' 0
+test_code '(@write "/dev/stdout" "text" @invalid)' '' 1
+
 write_status 'PASS' 32
