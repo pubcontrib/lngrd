@@ -17,5 +17,8 @@
     # invoke
     (@function "arg 1" "arg ..." "arg n")
 
+    # branch
+    if "test" "pass"
+
     # built-ins
     @write

@@ -107,6 +107,7 @@ typedef enum
     LNGRD_EXPRESSION_TYPE_LOOKUP,
     LNGRD_EXPRESSION_TYPE_ASSIGN,
     LNGRD_EXPRESSION_TYPE_INVOKE,
+    LNGRD_EXPRESSION_TYPE_BRANCH,
     LNGRD_EXPRESSION_TYPE_NATIVE
 } lngrd_ExpressionType;
 
@@ -125,7 +126,8 @@ typedef enum
     LNGRD_TOKEN_TYPE_COMMENT,
     LNGRD_TOKEN_TYPE_STRING,
     LNGRD_TOKEN_TYPE_IDENTIFIABLE,
-    LNGRD_TOKEN_TYPE_KEYSYMBOL
+    LNGRD_TOKEN_TYPE_KEYSYMBOL,
+    LNGRD_TOKEN_TYPE_KEYWORD
 } lngrd_TokenType;
 
 /*lex token*/
@@ -208,6 +210,13 @@ typedef struct
     lngrd_List *arguments;
 } lngrd_InvokeForm;
 
+/*branch expression form*/
+typedef struct
+{
+    lngrd_Block *test;
+    lngrd_Block *pass;
+} lngrd_BranchForm;
+
 /*native expression form*/
 typedef struct
 {
@@ -252,6 +261,7 @@ static void read_whitespace_token(lngrd_Lexer *lexer);
 static void read_comment_token(lngrd_Lexer *lexer);
 static void read_string_token(lngrd_Lexer *lexer);
 static void read_identifiable_token(lngrd_Lexer *lexer);
+static void read_keyword_token(lngrd_Lexer *lexer);
 static int has_another_symbol(const lngrd_Lexer *lexer);
 static char read_next_symbol(lngrd_Lexer *lexer);
 static char peek_next_symbol(const lngrd_Lexer *lexer);
@@ -261,6 +271,7 @@ static int is_string_symbol(char symbol);
 static int is_scope_symbol(char symbol);
 static int is_letter_symbol(char symbol);
 static int is_shorthand_symbol(char symbol);
+static int is_keyword_symbol(char symbol);
 static void do_write_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
 static void set_global_function(const char *name, void (*work)(lngrd_Executer *, lngrd_List *, lngrd_Stash *), lngrd_Executer *executer);
 static void set_executer_error(const char *message, lngrd_Executer *executer);
@@ -268,6 +279,7 @@ static void set_executor_result(lngrd_Block *result, lngrd_Executer *executer);
 static lngrd_Block *create_block(lngrd_BlockType type, void *data, size_t references);
 static lngrd_UInt hash_block(lngrd_Block *block);
 static lngrd_SInt compare_blocks(lngrd_Block *x, lngrd_Block *y);
+static int is_block_truthy(lngrd_Block *block);
 static void burn_pyre(lngrd_List *pyre);
 static lngrd_String *create_string(char *bytes, size_t length);
 static lngrd_String *cstring_to_string(const char *cstring);
@@ -275,6 +287,7 @@ static lngrd_String *bytes_to_string(const char *bytes, size_t length);
 static char *string_to_cstring(const lngrd_String *string);
 static lngrd_SInt compare_strings(lngrd_String *left, lngrd_String *right);
 static lngrd_UInt hash_string(lngrd_String *string);
+static int is_keyword_match(const lngrd_String *string, const char *keyword);
 static void destroy_string(lngrd_String *string);
 static lngrd_List *create_list(void);
 static void push_list_item(lngrd_List *list, lngrd_Block *item);
@@ -353,6 +366,10 @@ LNGRD_API void lngrd_progress_lexer(lngrd_Lexer *lexer)
     else if (symbol == '(' || symbol == ')')
     {
         lexer->token.type = LNGRD_TOKEN_TYPE_KEYSYMBOL;
+    }
+    else if (is_keyword_symbol(symbol))
+    {
+        read_keyword_token(lexer);
     }
     else if (is_scope_symbol(symbol))
     {
@@ -444,6 +461,22 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
 
                 form = (lngrd_InvokeForm *) pending->form;
                 push_list_item(form->arguments, offer);
+            }
+            else if (pending->type == LNGRD_EXPRESSION_TYPE_BRANCH)
+            {
+                lngrd_BranchForm *form;
+
+                form = (lngrd_BranchForm *) pending->form;
+
+                if (!form->test)
+                {
+                    form->test = offer;
+                }
+                else
+                {
+                    form->pass = offer;
+                    completed = 1;
+                }
             }
 
             if (completed)
@@ -558,6 +591,25 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
                     }
 
                     offer = create_block(LNGRD_BLOCK_TYPE_EXPRESSION, expression, 1);
+                }
+                else if (tokenType == LNGRD_TOKEN_TYPE_KEYWORD)
+                {
+                    lngrd_Expression *expression;
+
+                    if (is_keyword_match(&tokenValue, "if"))
+                    {
+                        lngrd_BranchForm *form;
+
+                        form = (lngrd_BranchForm *) allocate(1, sizeof(lngrd_BranchForm));
+                        form->test = NULL;
+                        form->pass = NULL;
+
+                        expression = create_expression(LNGRD_EXPRESSION_TYPE_BRANCH, form);
+
+                        push_list_item(stack, create_block(LNGRD_BLOCK_TYPE_EXPRESSION, expression, 1));
+
+                        continue;
+                    }
                 }
                 else if (tokenType == LNGRD_TOKEN_TYPE_KEYSYMBOL)
                 {
@@ -817,6 +869,40 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
                     break;
                 }
             }
+            else if (expression->type == LNGRD_EXPRESSION_TYPE_BRANCH)
+            {
+                lngrd_BranchForm *form;
+
+                form = (lngrd_BranchForm *) expression->form;
+
+                if (flow->phase == 0)
+                {
+                    lngrd_List *single;
+
+                    single = create_list();
+                    push_list_item(single, form->test);
+                    push_stash_item(flows, create_flow(single, 0, 1, 0));
+                    flow->phase = 1;
+                    sustain = 1;
+
+                    break;
+                }
+                else if (flow->phase == 1)
+                {
+                    if (is_block_truthy(executer->result))
+                    {
+                        lngrd_List *single;
+
+                        single = create_list();
+                        push_list_item(single, form->pass);
+                        push_stash_item(flows, create_flow(single, 0, 1, 0));
+                        flow->phase = 2;
+                        sustain = 1;
+
+                        break;
+                    }
+                }
+            }
             else if (expression->type == LNGRD_EXPRESSION_TYPE_NATIVE)
             {
                 lngrd_NativeForm *form;
@@ -981,6 +1067,50 @@ static void read_identifiable_token(lngrd_Lexer *lexer)
     }
 }
 
+static void read_keyword_token(lngrd_Lexer *lexer)
+{
+    static const char *keywords[] = {"if", NULL};
+    const char **keyword;
+
+    lexer->token.type = LNGRD_TOKEN_TYPE_KEYWORD;
+
+    for (keyword = keywords; *keyword; keyword++)
+    {
+        int match;
+        size_t index, length;
+
+        match = 1;
+        length = strlen(*keyword);
+
+        for (index = 0; index < length; index++)
+        {
+            size_t offset;
+
+            offset = lexer->token.start + index;
+
+            if (offset >= lexer->code->length)
+            {
+                lexer->errored = 1;
+                return;
+            }
+
+            if (lexer->code->bytes[offset] != (*keyword)[index])
+            {
+                match = 0;
+                break;
+            }
+        }
+
+        if (match)
+        {
+            lexer->token.end = lexer->token.start + length;
+            return;
+        }
+    }
+
+    lexer->errored = 1;
+}
+
 static int has_another_symbol(const lngrd_Lexer *lexer)
 {
     return lexer->token.end < lexer->code->length;
@@ -1026,6 +1156,11 @@ static int is_shorthand_symbol(char symbol)
     return is_letter_symbol(symbol)
         || is_number_symbol(symbol)
         || symbol == '_';
+}
+
+static int is_keyword_symbol(char symbol)
+{
+    return symbol >= 'a' && symbol <= 'z';
 }
 
 static void do_write_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities)
@@ -1182,6 +1317,27 @@ static lngrd_SInt compare_blocks(lngrd_Block *x, lngrd_Block *y)
     return 0;
 }
 
+static int is_block_truthy(lngrd_Block *block)
+{
+    switch (block->type)
+    {
+        case LNGRD_BLOCK_TYPE_STRING:
+            return ((lngrd_String *) block->data)->length > 0;
+
+        case LNGRD_BLOCK_TYPE_LIST:
+        case LNGRD_BLOCK_TYPE_FUNCTION:
+            return ((lngrd_List *) block->data)->length > 0;
+
+        case LNGRD_BLOCK_TYPE_MAP:
+            return ((lngrd_Map *) block->data)->length > 0;
+
+        default:
+            crash_with_message("unsupported branch");
+    }
+
+    return 0;
+}
+
 static void burn_pyre(lngrd_List *pyre)
 {
     while (pyre->length > 0)
@@ -1317,6 +1473,21 @@ static lngrd_UInt hash_string(lngrd_String *string)
     }
 
     return hash;
+}
+
+static int is_keyword_match(const lngrd_String *string, const char *keyword)
+{
+    size_t index;
+
+    for (index = 0; keyword[index]; index++)
+    {
+        if (index >= string->length || string->bytes[index] != keyword[index])
+        {
+            return 0;
+        }
+    }
+
+    return index == string->length;
 }
 
 static void destroy_string(lngrd_String *string)
@@ -1577,6 +1748,25 @@ static void burn_expression(lngrd_Expression *expression, lngrd_List *pyre)
 
             free(arguments->items);
             free(arguments);
+
+            break;
+        }
+
+        case LNGRD_EXPRESSION_TYPE_BRANCH:
+        {
+            lngrd_BranchForm *form;
+
+            form = (lngrd_BranchForm *) expression->form;
+
+            if (form->test)
+            {
+                push_list_item(pyre, form->test);
+            }
+
+            if (form->pass)
+            {
+                push_list_item(pyre, form->pass);
+            }
 
             break;
         }

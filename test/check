@@ -90,5 +90,18 @@ test_code '"text" |@variable |@variable (@write "/dev/stdout" @variable)' 'text'
 test_code '@write |@w (@w "/dev/stdout" "text")' 'text' 0
 test_code '"text" |@write' '' 0
 test_code '"|@variable' '' 1
+test_code 'if "0" (@write "/dev/stdout" "pass")' 'pass' 0
+test_code 'if "1" (@write "/dev/stdout" "pass")' 'pass' 0
+test_code 'if "x" (@write "/dev/stdout" "pass")' 'pass' 0
+test_code 'if @write (@write "/dev/stdout" "pass")' 'pass' 0
+test_code 'if "" (@write "/dev/stdout" "pass")' '' 0
+test_code 'if "1" if "2" (@write "/dev/stdout" "pass")' 'pass' 0
+test_code 'if "1" if "" (@write "/dev/stdout" "pass")' '' 0
+test_code 'if "" if "" (@write "/dev/stdout" "pass")' '' 0
+test_code '(@write "/dev/stdout" if "" "pass")' '' 0
+test_code '(@write "/dev/stdout" if "x" "pass")' 'pass' 0
+test_code 'if' '' 1
+test_code 'if ""' '' 1
+test_code 'junk' '' 1
 
 write_status 'PASS' 32
