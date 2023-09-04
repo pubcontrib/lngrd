@@ -78,5 +78,17 @@ test_code '(@write @write @write)' '' 1
 test_code '(@write "/dev/stdout" "1") @invalid (@write "/dev/stdout" "2")' '1' 1
 test_code '(@write "/dev/stdout" "text" "extra")' 'text' 0
 test_code '(@write "/dev/stdout" "text" @invalid)' '' 1
+test_code '@' '' 1
+test_code '|' '' 1
+test_code '@|' '' 1
+test_code '|@' '' 1
+test_code '$write' '' 1
+test_code '"text" |$variable' '' 1
+test_code '"text" |@variable (@write "/dev/stdout" @variable)' 'text' 0
+test_code '"text" |@variable |@clone (@write "/dev/stdout" @clone)' 'text' 0
+test_code '"text" |@variable |@variable (@write "/dev/stdout" @variable)' 'text' 0
+test_code '@write |@w (@w "/dev/stdout" "text")' 'text' 0
+test_code '"text" |@write' '' 0
+test_code '"|@variable' '' 1
 
 write_status 'PASS' 32

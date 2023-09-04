@@ -11,6 +11,9 @@
     # lookup
     @global
 
+    # assign
+    "value" |@variable
+
     # invoke
     (@function "arg 1" "arg ..." "arg n")
 

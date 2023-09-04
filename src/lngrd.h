@@ -105,6 +105,7 @@ typedef enum
 {
     LNGRD_EXPRESSION_TYPE_LITERAL,
     LNGRD_EXPRESSION_TYPE_LOOKUP,
+    LNGRD_EXPRESSION_TYPE_ASSIGN,
     LNGRD_EXPRESSION_TYPE_INVOKE,
     LNGRD_EXPRESSION_TYPE_NATIVE
 } lngrd_ExpressionType;
@@ -187,6 +188,13 @@ typedef enum
     LNGRD_SCOPE_TYPE_GLOBAL
 } lngrd_ScopeType;
 
+/*assign expression form*/
+typedef struct
+{
+    lngrd_ScopeType scope;
+    lngrd_Block *name;
+} lngrd_AssignForm;
+
 /*lookup expression form*/
 typedef struct
 {
@@ -263,6 +271,7 @@ static lngrd_SInt compare_blocks(lngrd_Block *x, lngrd_Block *y);
 static void burn_pyre(lngrd_List *pyre);
 static lngrd_String *create_string(char *bytes, size_t length);
 static lngrd_String *cstring_to_string(const char *cstring);
+static lngrd_String *bytes_to_string(const char *bytes, size_t length);
 static char *string_to_cstring(const lngrd_String *string);
 static lngrd_SInt compare_strings(lngrd_String *left, lngrd_String *right);
 static lngrd_UInt hash_string(lngrd_String *string);
@@ -349,6 +358,11 @@ LNGRD_API void lngrd_progress_lexer(lngrd_Lexer *lexer)
     {
         read_identifiable_token(lexer);
     }
+    else if (symbol == '|' && has_another_symbol(lexer) && is_scope_symbol(peek_next_symbol(lexer)))
+    {
+        read_next_symbol(lexer);
+        read_identifiable_token(lexer);
+    }
     else if (symbol == '"')
     {
         read_string_token(lexer);
@@ -420,7 +434,7 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
                     completed = 1;
                 }
             }
-            else if (pending->type == LNGRD_EXPRESSION_TYPE_LOOKUP)
+            else if (pending->type == LNGRD_EXPRESSION_TYPE_LOOKUP || pending->type == LNGRD_EXPRESSION_TYPE_ASSIGN)
             {
                 completed = 1;
             }
@@ -505,38 +519,45 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
                 else if (tokenType == LNGRD_TOKEN_TYPE_IDENTIFIABLE)
                 {
                     lngrd_Expression *expression;
-                    lngrd_LookupForm *form;
 
-                    if (tokenValue.bytes[0] == '@')
+                    if (tokenValue.bytes[0] == '|')
                     {
-                        char *bytes;
-                        size_t length;
+                        lngrd_AssignForm *form;
 
-                        length = token.end - token.start - 1;
-
-                        if (length > 0)
+                        if (tokenValue.bytes[1] == '@')
                         {
-                            bytes = (char *) allocate(length, sizeof(char));
-                            memcpy(bytes, lexer->code->bytes + token.start + 1, length);
+                            form = (lngrd_AssignForm *) allocate(1, sizeof(lngrd_AssignForm));
+                            form->scope = LNGRD_SCOPE_TYPE_GLOBAL;
+                            form->name = create_block(LNGRD_BLOCK_TYPE_STRING, bytes_to_string(lexer->code->bytes + token.start + 2, token.end - token.start - 2), 1);
+
+                            expression = create_expression(LNGRD_EXPRESSION_TYPE_ASSIGN, form);
                         }
                         else
                         {
-                            bytes = NULL;
+                            parser->errored = 1;
+                            return;
                         }
-
-                        form = (lngrd_LookupForm *) allocate(1, sizeof(lngrd_LookupForm));
-                        form->scope = LNGRD_SCOPE_TYPE_GLOBAL;
-                        form->name = create_block(LNGRD_BLOCK_TYPE_STRING, create_string(bytes, length), 1);
-
-                        expression = create_expression(LNGRD_EXPRESSION_TYPE_LOOKUP, form);
-
-                        offer = create_block(LNGRD_BLOCK_TYPE_EXPRESSION, expression, 1);
                     }
                     else
                     {
-                        parser->errored = 1;
-                        return;
+                        lngrd_LookupForm *form;
+
+                        if (tokenValue.bytes[0] == '@')
+                        {
+                            form = (lngrd_LookupForm *) allocate(1, sizeof(lngrd_LookupForm));
+                            form->scope = LNGRD_SCOPE_TYPE_GLOBAL;
+                            form->name = create_block(LNGRD_BLOCK_TYPE_STRING, bytes_to_string(lexer->code->bytes + token.start + 1, token.end - token.start - 1), 1);
+
+                            expression = create_expression(LNGRD_EXPRESSION_TYPE_LOOKUP, form);
+                        }
+                        else
+                        {
+                            parser->errored = 1;
+                            return;
+                        }
                     }
+
+                    offer = create_block(LNGRD_BLOCK_TYPE_EXPRESSION, expression, 1);
                 }
                 else if (tokenType == LNGRD_TOKEN_TYPE_KEYSYMBOL)
                 {
@@ -695,6 +716,22 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
                     set_executer_error("absent argument", executer);
                     break;
                 }
+            }
+            else if (expression->type == LNGRD_EXPRESSION_TYPE_ASSIGN)
+            {
+                lngrd_AssignForm *form;
+
+                form = (lngrd_AssignForm *) expression->form;
+
+                if (!executer->result)
+                {
+                    set_executer_error("absent result", executer);
+                    break;
+                }
+
+                form->name->references++;
+                executer->result->references++;
+                set_map_item(executer->globals, form->name, executer->result, executer->pyre);
             }
             else if (expression->type == LNGRD_EXPRESSION_TYPE_INVOKE)
             {
@@ -1201,22 +1238,24 @@ static lngrd_String *create_string(char *bytes, size_t length)
 
 static lngrd_String *cstring_to_string(const char *cstring)
 {
-    char *bytes;
-    size_t length;
+    return bytes_to_string(cstring, strlen(cstring));
+}
 
-    length = strlen(cstring);
+static lngrd_String *bytes_to_string(const char *bytes, size_t length)
+{
+    char *buffer;
 
     if (length > 0)
     {
-        bytes = (char *) allocate(length, sizeof(char));
-        memcpy(bytes, cstring, length);
+        buffer = (char *) allocate(length, sizeof(char));
+        memcpy(buffer, bytes, length);
     }
     else
     {
-        bytes = NULL;
+        buffer = NULL;
     }
 
-    return create_string(bytes, length);
+    return create_string(buffer, length);
 }
 
 static char *string_to_cstring(const lngrd_String *string)
@@ -1508,6 +1547,16 @@ static void burn_expression(lngrd_Expression *expression, lngrd_List *pyre)
             lngrd_LookupForm *form;
 
             form = (lngrd_LookupForm *) expression->form;
+            push_list_item(pyre, form->name);
+
+            break;
+        }
+
+        case LNGRD_EXPRESSION_TYPE_ASSIGN:
+        {
+            lngrd_AssignForm *form;
+
+            form = (lngrd_AssignForm *) expression->form;
             push_list_item(pyre, form->name);
 
             break;
