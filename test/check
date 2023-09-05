@@ -103,5 +103,12 @@ test_code '(@write "/dev/stdout" if "x" "pass")' 'pass' 0
 test_code 'if' '' 1
 test_code 'if ""' '' 1
 test_code 'junk' '' 1
+test_code '\ /' '' 0
+test_code '\ (@write "/dev/stdout" "1") /' '1' 0
+test_code '\ (@write "/dev/stdout" "1") (@write "/dev/stdout" "2") (@write "/dev/stdout" "3") /' '123' 0
+test_code '(@write "/dev/stdout" \ "1" "2" "3" /)' '3' 0
+test_code '\' '' 1
+test_code '/' '' 1
+test_code '/ "1"' '' 1
 
 write_status 'PASS' 32

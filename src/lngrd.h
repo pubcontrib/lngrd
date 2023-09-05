@@ -108,6 +108,7 @@ typedef enum
     LNGRD_EXPRESSION_TYPE_ASSIGN,
     LNGRD_EXPRESSION_TYPE_INVOKE,
     LNGRD_EXPRESSION_TYPE_BRANCH,
+    LNGRD_EXPRESSION_TYPE_GROUP,
     LNGRD_EXPRESSION_TYPE_NATIVE
 } lngrd_ExpressionType;
 
@@ -216,6 +217,12 @@ typedef struct
     lngrd_Block *test;
     lngrd_Block *pass;
 } lngrd_BranchForm;
+
+/*group expression form*/
+typedef struct
+{
+    lngrd_List *expressions;
+} lngrd_GroupForm;
 
 /*native expression form*/
 typedef struct
@@ -363,7 +370,7 @@ LNGRD_API void lngrd_progress_lexer(lngrd_Lexer *lexer)
     {
         read_whitespace_token(lexer);
     }
-    else if (symbol == '(' || symbol == ')')
+    else if (symbol == '(' || symbol == ')' || symbol == '\\' || symbol == '/')
     {
         lexer->token.type = LNGRD_TOKEN_TYPE_KEYSYMBOL;
     }
@@ -477,6 +484,13 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
                     form->pass = offer;
                     completed = 1;
                 }
+            }
+            else if (pending->type == LNGRD_EXPRESSION_TYPE_GROUP)
+            {
+                lngrd_GroupForm *form;
+
+                form = (lngrd_GroupForm *) pending->form;
+                push_list_item(form->expressions, offer);
             }
 
             if (completed)
@@ -632,6 +646,28 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
                     else if (symbol == ')')
                     {
                         if (stack->length == 0 || ((lngrd_Expression *) peek_list_item(stack)->data)->type != LNGRD_EXPRESSION_TYPE_INVOKE)
+                        {
+                            parser->errored = 1;
+                            return;
+                        }
+
+                        terminate = 1;
+                    }
+                    else if (symbol == '\\')
+                    {
+                        lngrd_Expression *expression;
+                        lngrd_GroupForm *form;
+
+                        form = (lngrd_GroupForm *) allocate(1, sizeof(lngrd_GroupForm));
+                        form->expressions = create_list();
+
+                        expression = create_expression(LNGRD_EXPRESSION_TYPE_GROUP, form);
+
+                        push_list_item(stack, create_block(LNGRD_BLOCK_TYPE_EXPRESSION, expression, 1));
+                    }
+                    else if (symbol == '/')
+                    {
+                        if (stack->length == 0 || ((lngrd_Expression *) peek_list_item(stack)->data)->type != LNGRD_EXPRESSION_TYPE_GROUP)
                         {
                             parser->errored = 1;
                             return;
@@ -902,6 +938,20 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
                         break;
                     }
                 }
+            }
+            else if (expression->type == LNGRD_EXPRESSION_TYPE_GROUP)
+            {
+                lngrd_GroupForm *form;
+
+                form = (lngrd_GroupForm *) expression->form;
+                push_stash_item(flows, create_flow(form->expressions, 0, 0, 0));
+                flow->index += 1;
+                flow->phase = 0;
+                sustain = 1;
+
+                set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, cstring_to_string(""), 0), executer);
+
+                break;
             }
             else if (expression->type == LNGRD_EXPRESSION_TYPE_NATIVE)
             {
@@ -1767,6 +1817,25 @@ static void burn_expression(lngrd_Expression *expression, lngrd_List *pyre)
             {
                 push_list_item(pyre, form->pass);
             }
+
+            break;
+        }
+
+        case LNGRD_EXPRESSION_TYPE_GROUP:
+        {
+            lngrd_GroupForm *form;
+            lngrd_List *expressions;
+
+            form = (lngrd_GroupForm *) expression->form;
+            expressions = form->expressions;
+
+            while (expressions->length > 0)
+            {
+                push_list_item(pyre, pop_list_item(expressions));
+            }
+
+            free(expressions->items);
+            free(expressions);
 
             break;
         }
