@@ -108,6 +108,7 @@ typedef enum
     LNGRD_EXPRESSION_TYPE_ASSIGN,
     LNGRD_EXPRESSION_TYPE_INVOKE,
     LNGRD_EXPRESSION_TYPE_BRANCH,
+    LNGRD_EXPRESSION_TYPE_LOOP,
     LNGRD_EXPRESSION_TYPE_GROUP,
     LNGRD_EXPRESSION_TYPE_NATIVE
 } lngrd_ExpressionType;
@@ -217,6 +218,13 @@ typedef struct
     lngrd_Block *test;
     lngrd_Block *pass;
 } lngrd_BranchForm;
+
+/*loop expression form*/
+typedef struct
+{
+    lngrd_Block *test;
+    lngrd_Block *body;
+} lngrd_LoopForm;
 
 /*group expression form*/
 typedef struct
@@ -485,6 +493,22 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
                     completed = 1;
                 }
             }
+            else if (pending->type == LNGRD_EXPRESSION_TYPE_LOOP)
+            {
+                lngrd_LoopForm *form;
+
+                form = (lngrd_LoopForm *) pending->form;
+
+                if (!form->test)
+                {
+                    form->test = offer;
+                }
+                else
+                {
+                    form->body = offer;
+                    completed = 1;
+                }
+            }
             else if (pending->type == LNGRD_EXPRESSION_TYPE_GROUP)
             {
                 lngrd_GroupForm *form;
@@ -619,6 +643,20 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
                         form->pass = NULL;
 
                         expression = create_expression(LNGRD_EXPRESSION_TYPE_BRANCH, form);
+
+                        push_list_item(stack, create_block(LNGRD_BLOCK_TYPE_EXPRESSION, expression, 1));
+
+                        continue;
+                    }
+                    else if (is_keyword_match(&tokenValue, "while"))
+                    {
+                        lngrd_LoopForm *form;
+
+                        form = (lngrd_LoopForm *) allocate(1, sizeof(lngrd_LookupForm));
+                        form->test = NULL;
+                        form->body = NULL;
+
+                        expression = create_expression(LNGRD_EXPRESSION_TYPE_LOOP, form);
 
                         push_list_item(stack, create_block(LNGRD_BLOCK_TYPE_EXPRESSION, expression, 1));
 
@@ -939,6 +977,51 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
                     }
                 }
             }
+            else if (expression->type == LNGRD_EXPRESSION_TYPE_LOOP)
+            {
+                lngrd_LoopForm *form;
+
+                form = (lngrd_LoopForm *) expression->form;
+
+                if (flow->phase == 0)
+                {
+                    lngrd_List *single;
+
+                    single = create_list();
+                    push_list_item(single, form->test);
+                    push_stash_item(flows, create_flow(single, 0, 1, 0));
+                    flow->phase = 1;
+                    sustain = 1;
+
+                    break;
+                }
+                else if (flow->phase == 1)
+                {
+                    if (is_block_truthy(executer->result))
+                    {
+                        lngrd_List *single;
+
+                        single = create_list();
+                        push_list_item(single, form->body);
+                        push_stash_item(flows, create_flow(single, 0, 1, 0));
+                        flow->phase = 0;
+                        sustain = 1;
+
+                        break;
+                    }
+                    else
+                    {
+                        flow->phase = 2;
+                        sustain = 1;
+
+                        break;
+                    }
+                }
+                else if (flow->phase == 2)
+                {
+                    set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, cstring_to_string(""), 0), executer);
+                }
+            }
             else if (expression->type == LNGRD_EXPRESSION_TYPE_GROUP)
             {
                 lngrd_GroupForm *form;
@@ -1119,7 +1202,7 @@ static void read_identifiable_token(lngrd_Lexer *lexer)
 
 static void read_keyword_token(lngrd_Lexer *lexer)
 {
-    static const char *keywords[] = {"if", NULL};
+    static const char *keywords[] = {"if", "while", NULL};
     const char **keyword;
 
     lexer->token.type = LNGRD_TOKEN_TYPE_KEYWORD;
@@ -1816,6 +1899,25 @@ static void burn_expression(lngrd_Expression *expression, lngrd_List *pyre)
             if (form->pass)
             {
                 push_list_item(pyre, form->pass);
+            }
+
+            break;
+        }
+
+        case LNGRD_EXPRESSION_TYPE_LOOP:
+        {
+            lngrd_LoopForm *form;
+
+            form = (lngrd_LoopForm *) expression->form;
+
+            if (form->test)
+            {
+                push_list_item(pyre, form->test);
+            }
+
+            if (form->body)
+            {
+                push_list_item(pyre, form->body);
             }
 
             break;

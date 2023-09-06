@@ -110,5 +110,12 @@ test_code '(@write "/dev/stdout" \ "1" "2" "3" /)' '3' 0
 test_code '\' '' 1
 test_code '/' '' 1
 test_code '/ "1"' '' 1
+test_code 'while "" \/' '' 0
+test_code '"x" |@test while @test \ (@write "/dev/stdout" ".") "" |@test /' '.' 0
+test_code '"" |@1 "" |@2 "x" |@3 "x" |@t while @t \ (@write "/dev/stdout" ".") if @1 \ "" |@t / if @2 \ "x" |@1 / if @3 \ "x" |@2 / /' '...' 0
+test_code '(@write "/dev/stdout" \ while "" \/ /)' '' 0
+test_code '"x" |@test (@write "/dev/stdout" \ while @test \ "" |@test "." / /)' '' 0
+test_code 'while' '' 1
+test_code 'while ""' '' 1
 
 write_status 'PASS' 32

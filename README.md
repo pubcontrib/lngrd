@@ -20,6 +20,9 @@
     # branch
     if "test" "pass"
 
+    # loop
+    while "test" "body"
+
     # group
     \
       # expressions
