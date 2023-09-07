@@ -117,5 +117,10 @@ test_code '(@write "/dev/stdout" \ while "" \/ /)' '' 0
 test_code '"x" |@test (@write "/dev/stdout" \ while @test \ "" |@test "." / /)' '' 0
 test_code 'while' '' 1
 test_code 'while ""' '' 1
+test_code 'catch @missing' '' 0
+test_code '(@write "/dev/stdout" \ catch \ @missing / /)' 'absent variable' 0
+test_code '(@write "/dev/stdout" \ catch \ "text" / /)' '' 0
+test_code '(@write "/dev/stdout" \ catch \ / /)' '' 0
+test_code 'catch' '' 1
 
 write_status 'PASS' 32

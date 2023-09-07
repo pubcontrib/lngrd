@@ -23,6 +23,9 @@
     # loop
     while "test" "body"
 
+    # catch
+    catch "failable"
+
     # group
     \
       # expressions
