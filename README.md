@@ -26,6 +26,9 @@
     # catch
     catch "failable"
 
+    # throw
+    throw "error"
+
     # group
     \
       # expressions

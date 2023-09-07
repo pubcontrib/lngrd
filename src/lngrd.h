@@ -110,6 +110,7 @@ typedef enum
     LNGRD_EXPRESSION_TYPE_BRANCH,
     LNGRD_EXPRESSION_TYPE_LOOP,
     LNGRD_EXPRESSION_TYPE_CATCH,
+    LNGRD_EXPRESSION_TYPE_THROW,
     LNGRD_EXPRESSION_TYPE_GROUP,
     LNGRD_EXPRESSION_TYPE_NATIVE
 } lngrd_ExpressionType;
@@ -232,6 +233,12 @@ typedef struct
 {
     lngrd_Block *failable;
 } lngrd_CatchForm;
+
+/*throw expression form*/
+typedef struct
+{
+    lngrd_Block *error;
+} lngrd_ThrowForm;
 
 /*group expression form*/
 typedef struct
@@ -524,6 +531,14 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
                 form->failable = offer;
                 completed = 1;
             }
+            else if (pending->type == LNGRD_EXPRESSION_TYPE_THROW)
+            {
+                lngrd_ThrowForm *form;
+
+                form = (lngrd_ThrowForm *) pending->form;
+                form->error = offer;
+                completed = 1;
+            }
             else if (pending->type == LNGRD_EXPRESSION_TYPE_GROUP)
             {
                 lngrd_GroupForm *form;
@@ -685,6 +700,19 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
                         form->failable = NULL;
 
                         expression = create_expression(LNGRD_EXPRESSION_TYPE_CATCH, form);
+
+                        push_list_item(stack, create_block(LNGRD_BLOCK_TYPE_EXPRESSION, expression, 1));
+
+                        continue;
+                    }
+                    else if (is_keyword_match(&tokenValue, "throw"))
+                    {
+                        lngrd_ThrowForm *form;
+
+                        form = (lngrd_ThrowForm *) allocate(1, sizeof(lngrd_ThrowForm));
+                        form->error = NULL;
+
+                        expression = create_expression(LNGRD_EXPRESSION_TYPE_THROW, form);
 
                         push_list_item(stack, create_block(LNGRD_BLOCK_TYPE_EXPRESSION, expression, 1));
 
@@ -1080,6 +1108,31 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
                     }
                 }
             }
+            else if (expression->type == LNGRD_EXPRESSION_TYPE_THROW)
+            {
+                lngrd_ThrowForm *form;
+
+                form = (lngrd_ThrowForm *) expression->form;
+
+                if (flow->phase == 0)
+                {
+                    lngrd_List *single;
+
+                    single = create_list();
+                    push_list_item(single, form->error);
+                    push_stash_item(flows, create_flow(single, 0, 1, 0));
+                    flow->phase = 1;
+                    sustain = 1;
+
+                    break;
+                }
+                else if (flow->phase == 1)
+                {
+                    executer->errored = 1;
+                }
+
+                break;
+            }
             else if (expression->type == LNGRD_EXPRESSION_TYPE_GROUP)
             {
                 lngrd_GroupForm *form;
@@ -1260,7 +1313,7 @@ static void read_identifiable_token(lngrd_Lexer *lexer)
 
 static void read_keyword_token(lngrd_Lexer *lexer)
 {
-    static const char *keywords[] = {"if", "while", "catch", NULL};
+    static const char *keywords[] = {"if", "while", "catch", "throw", NULL};
     const char **keyword;
 
     lexer->token.type = LNGRD_TOKEN_TYPE_KEYWORD;
@@ -1990,6 +2043,20 @@ static void burn_expression(lngrd_Expression *expression, lngrd_List *pyre)
             if (form->failable)
             {
                 push_list_item(pyre, form->failable);
+            }
+
+            break;
+        }
+
+        case LNGRD_EXPRESSION_TYPE_THROW:
+        {
+            lngrd_ThrowForm *form;
+
+            form = (lngrd_ThrowForm *) expression->form;
+
+            if (form->error)
+            {
+                push_list_item(pyre, form->error);
             }
 
             break;

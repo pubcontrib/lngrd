@@ -122,5 +122,10 @@ test_code '(@write "/dev/stdout" \ catch \ @missing / /)' 'absent variable' 0
 test_code '(@write "/dev/stdout" \ catch \ "text" / /)' '' 0
 test_code '(@write "/dev/stdout" \ catch \ / /)' '' 0
 test_code 'catch' '' 1
+test_code 'throw "error"' '' 1
+test_code '(@write "/dev/stdout" \ catch \ throw "error" / /)' 'error' 0
+test_code '(\ catch \ throw @write / / "/dev/stdout" "text")' 'text' 0
+test_code 'throw throw "error"' '' 1
+test_code 'throw' '' 1
 
 write_status 'PASS' 32
