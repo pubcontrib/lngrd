@@ -1452,7 +1452,7 @@ static void do_write_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd
         return;
     }
 
-    if (f->length > 0)
+    if (t->length > 0)
     {
         fwrite(t->bytes, sizeof(char), t->length, handle);
     }
