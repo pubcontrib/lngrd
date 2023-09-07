@@ -127,5 +127,22 @@ test_code '(@write "/dev/stdout" \ catch \ throw "error" / /)' 'error' 0
 test_code '(\ catch \ throw @write / / "/dev/stdout" "text")' 'text' 0
 test_code 'throw throw "error"' '' 1
 test_code 'throw' '' 1
+test_code '"text" |@variable %@variable (@write "/dev/stdout" \ catch \ @variable / /)' 'absent variable' 0
+test_code '%@variable (@write "/dev/stdout" \ catch \ @variable / /)' 'absent variable' 0
+test_code '"0" |@0 "1" |@1 "2" |@2 %@0 (@write "/dev/stdout" @1) (@write "/dev/stdout" @2)' '12' 0
+test_code '"0" |@0 "1" |@1 "2" |@2 %@1 (@write "/dev/stdout" @0) (@write "/dev/stdout" @2)' '02' 0
+test_code '"0" |@0 "1" |@1 "2" |@2 %@2 (@write "/dev/stdout" @0) (@write "/dev/stdout" @1)' '01' 0
+test_code '"0" |@0 "1" |@1 "2" |@2 %@0 %@1 (@write "/dev/stdout" @2)' '2' 0
+test_code '"0" |@0 "1" |@1 "2" |@2 %@1 %@0 (@write "/dev/stdout" @2)' '2' 0
+test_code '"0" |@0 "4" |@4 "8" |@8 %@0 (@write "/dev/stdout" @4) (@write "/dev/stdout" @8)' '48' 0
+test_code '"0" |@0 "4" |@4 "8" |@8 %@4 (@write "/dev/stdout" @0) (@write "/dev/stdout" @8)' '08' 0
+test_code '"0" |@0 "4" |@4 "8" |@8 %@8 (@write "/dev/stdout" @0) (@write "/dev/stdout" @4)' '04' 0
+test_code '"0" |@0 "4" |@4 "8" |@8 %@0 %@4 (@write "/dev/stdout" @8)' '8' 0
+test_code '"0" |@0 "4" |@4 "8" |@8 %@4 %@0 (@write "/dev/stdout" @8)' '8' 0
+test_code '"0" |@0 "8" |@8 "32" |@32 %@0 (@write "/dev/stdout" @8) (@write "/dev/stdout" @32)' '832' 0
+test_code '"0" |@0 "8" |@8 "32" |@32 %@8 (@write "/dev/stdout" @0) (@write "/dev/stdout" @32)' '032' 0
+test_code '"0" |@0 "8" |@8 "32" |@32 %@32 (@write "/dev/stdout" @0) (@write "/dev/stdout" @8)' '08' 0
+test_code '"0" |@0 "8" |@8 "32" |@32 %@0 %@8 (@write "/dev/stdout" @32)' '32' 0
+test_code '"0" |@0 "8" |@8 "32" |@32 %@8 %@0 (@write "/dev/stdout" @32)' '32' 0
 
 write_status 'PASS' 32

@@ -106,6 +106,7 @@ typedef enum
     LNGRD_EXPRESSION_TYPE_LITERAL,
     LNGRD_EXPRESSION_TYPE_LOOKUP,
     LNGRD_EXPRESSION_TYPE_ASSIGN,
+    LNGRD_EXPRESSION_TYPE_UNASSIGN,
     LNGRD_EXPRESSION_TYPE_INVOKE,
     LNGRD_EXPRESSION_TYPE_BRANCH,
     LNGRD_EXPRESSION_TYPE_LOOP,
@@ -200,6 +201,13 @@ typedef struct
     lngrd_ScopeType scope;
     lngrd_Block *name;
 } lngrd_AssignForm;
+
+/*unassign expression form*/
+typedef struct
+{
+    lngrd_ScopeType scope;
+    lngrd_Block *name;
+} lngrd_UnassignForm;
 
 /*lookup expression form*/
 typedef struct
@@ -326,6 +334,7 @@ static void burn_list(lngrd_List *list, lngrd_List *pyre);
 static lngrd_Map *create_map(void);
 static lngrd_Block *get_map_item(lngrd_Map *map, lngrd_Block *key);
 static void set_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_Block *block, lngrd_List *pyre);
+static void unset_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_List *pyre);
 static void burn_map(lngrd_Map *map, lngrd_List *pyre);
 static lngrd_Expression *create_expression(lngrd_ExpressionType type, void *form);
 static void burn_expression(lngrd_Expression *expression, lngrd_List *pyre);
@@ -404,7 +413,7 @@ LNGRD_API void lngrd_progress_lexer(lngrd_Lexer *lexer)
     {
         read_identifiable_token(lexer);
     }
-    else if (symbol == '|' && has_another_symbol(lexer) && is_scope_symbol(peek_next_symbol(lexer)))
+    else if ((symbol == '|' || symbol == '%') && has_another_symbol(lexer) && is_scope_symbol(peek_next_symbol(lexer)))
     {
         read_next_symbol(lexer);
         read_identifiable_token(lexer);
@@ -480,7 +489,7 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
                     completed = 1;
                 }
             }
-            else if (pending->type == LNGRD_EXPRESSION_TYPE_LOOKUP || pending->type == LNGRD_EXPRESSION_TYPE_ASSIGN)
+            else if (pending->type == LNGRD_EXPRESSION_TYPE_LOOKUP || pending->type == LNGRD_EXPRESSION_TYPE_ASSIGN || pending->type == LNGRD_EXPRESSION_TYPE_UNASSIGN)
             {
                 completed = 1;
             }
@@ -632,6 +641,24 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
                             form->name = create_block(LNGRD_BLOCK_TYPE_STRING, bytes_to_string(lexer->code->bytes + token.start + 2, token.end - token.start - 2), 1);
 
                             expression = create_expression(LNGRD_EXPRESSION_TYPE_ASSIGN, form);
+                        }
+                        else
+                        {
+                            parser->errored = 1;
+                            return;
+                        }
+                    }
+                    else if (tokenValue.bytes[0] == '%')
+                    {
+                        lngrd_UnassignForm *form;
+
+                        if (tokenValue.bytes[1] == '@')
+                        {
+                            form = (lngrd_UnassignForm *) allocate(1, sizeof(lngrd_UnassignForm));
+                            form->scope = LNGRD_SCOPE_TYPE_GLOBAL;
+                            form->name = create_block(LNGRD_BLOCK_TYPE_STRING, bytes_to_string(lexer->code->bytes + token.start + 2, token.end - token.start - 2), 1);
+
+                            expression = create_expression(LNGRD_EXPRESSION_TYPE_UNASSIGN, form);
                         }
                         else
                         {
@@ -914,6 +941,15 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
                 form->name->references++;
                 executer->result->references++;
                 set_map_item(executer->globals, form->name, executer->result, executer->pyre);
+            }
+            else if (expression->type == LNGRD_EXPRESSION_TYPE_UNASSIGN)
+            {
+                lngrd_UnassignForm *form;
+
+                form = (lngrd_UnassignForm *) expression->form;
+
+                unset_map_item(executer->globals, form->name, executer->pyre);
+                set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, cstring_to_string(""), 0), executer);
             }
             else if (expression->type == LNGRD_EXPRESSION_TYPE_INVOKE)
             {
@@ -1911,6 +1947,80 @@ static void set_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_Block *block, l
     }
 }
 
+static void unset_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_List *pyre)
+{
+    size_t index, tally;
+
+    index = hash_block(key) % map->capacity;
+
+    for (tally = 0; tally < map->capacity; tally++, index++)
+    {
+        lngrd_Pair *pair;
+
+        if (index == map->capacity)
+        {
+            index = 0;
+        }
+
+        pair = &map->items[index];
+
+        if (pair->key)
+        {
+            if (compare_blocks(key, pair->key) == 0)
+            {
+                push_list_item(pyre, pair->key);
+                push_list_item(pyre, pair->value);
+                pair->key = NULL;
+
+                break;
+            }
+        }
+        else
+        {
+            return;
+        }
+    }
+
+    index = tally;
+
+    for (tally = 0; tally < map->capacity; tally++, index++)
+    {
+        size_t next;
+        lngrd_Pair *source;
+
+        if (index == map->capacity)
+        {
+            index = 0;
+        }
+
+        next = index + 1;
+
+        if (next == map->capacity)
+        {
+            next = 0;
+        }
+
+        source = &map->items[next];
+
+        if (source->key)
+        {
+            if (hash_block(key) % map->capacity == hash_block(source->key) % map->capacity)
+            {
+                lngrd_Pair *destination;
+
+                destination = &map->items[index];
+                destination->key = source->key;
+                destination->value = source->value;
+                source->key = NULL;
+            }
+        }
+        else
+        {
+            return;
+        }
+    }
+}
+
 static void burn_map(lngrd_Map *map, lngrd_List *pyre)
 {
     size_t index;
@@ -1972,6 +2082,16 @@ static void burn_expression(lngrd_Expression *expression, lngrd_List *pyre)
             lngrd_AssignForm *form;
 
             form = (lngrd_AssignForm *) expression->form;
+            push_list_item(pyre, form->name);
+
+            break;
+        }
+
+        case LNGRD_EXPRESSION_TYPE_UNASSIGN:
+        {
+            lngrd_UnassignForm *form;
+
+            form = (lngrd_UnassignForm *) expression->form;
             push_list_item(pyre, form->name);
 
             break;

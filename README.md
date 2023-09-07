@@ -14,6 +14,9 @@
     # assign
     "value" |@variable
 
+    # unassign
+    %@variable
+
     # invoke
     (@function "arg 1" "arg ..." "arg n")
 
