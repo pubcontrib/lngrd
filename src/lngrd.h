@@ -1911,6 +1911,8 @@ static void set_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_Block *block, l
                 set_map_item(map, item->key, item->value, pyre);
             }
         }
+
+        free(oldItems);
     }
 
     index = hash_block(key) % map->capacity;

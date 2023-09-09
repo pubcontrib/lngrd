@@ -144,5 +144,8 @@ test_code '"0" |@0 "8" |@8 "32" |@32 %@8 (@write "/dev/stdout" @0) (@write "/dev
 test_code '"0" |@0 "8" |@8 "32" |@32 %@32 (@write "/dev/stdout" @0) (@write "/dev/stdout" @8)' '08' 0
 test_code '"0" |@0 "8" |@8 "32" |@32 %@0 %@8 (@write "/dev/stdout" @32)' '32' 0
 test_code '"0" |@0 "8" |@8 "32" |@32 %@8 %@0 (@write "/dev/stdout" @32)' '32' 0
+test_code '"x" |@0 |@1 |@2 |@3 |@4 |@5 |@6 |@7 |@8 |@9 (@write "/dev/stdout" @0) (@write "/dev/stdout" @9)' 'xx' 0
+test_code '"x" |@0 |@0 |@0 |@0 |@0 |@0 |@0 |@0 |@0 |@0 (@write "/dev/stdout" @0)' 'x' 0
+test_code '"0" |@0 "1" |@1 "2" |@2 "3" |@3 "4" |@4 "5" |@5 "6" |@6 "7" |@7 "8" |@8 "9" |@9 (@write "/dev/stdout" @0) (@write "/dev/stdout" @9)' '09' 0
 
 write_status 'PASS' 32
