@@ -55,6 +55,7 @@ typedef unsigned int lngrd_UInt; /*32-bit unsigned integer*/
 /*classifier for a piece of generic data*/
 typedef enum
 {
+    LNGRD_BLOCK_TYPE_NUMBER,
     LNGRD_BLOCK_TYPE_STRING,
     LNGRD_BLOCK_TYPE_LIST,
     LNGRD_BLOCK_TYPE_MAP,
@@ -69,6 +70,19 @@ typedef struct
     void *data;
     size_t references;
 } lngrd_Block;
+
+/*bit layout for a signed fixed-point number*/
+typedef enum
+{
+    LNGRD_NUMBER_LAYOUT_32_0 /*32.0*/
+} lngrd_NumberLayout;
+
+/*signed fixed-point number*/
+typedef struct
+{
+    lngrd_NumberLayout layout;
+    lngrd_SInt value;
+} lngrd_Number;
 
 /*length terminated ASCII string*/
 typedef struct
@@ -129,6 +143,7 @@ typedef enum
     LNGRD_TOKEN_TYPE_UNKNOWN,
     LNGRD_TOKEN_TYPE_WHITESPACE,
     LNGRD_TOKEN_TYPE_COMMENT,
+    LNGRD_TOKEN_TYPE_NUMBER,
     LNGRD_TOKEN_TYPE_STRING,
     LNGRD_TOKEN_TYPE_IDENTIFIABLE,
     LNGRD_TOKEN_TYPE_KEYSYMBOL,
@@ -296,6 +311,7 @@ LNGRD_API void lngrd_stop_executer(lngrd_Executer *executer);
 
 static void read_whitespace_token(lngrd_Lexer *lexer);
 static void read_comment_token(lngrd_Lexer *lexer);
+static void read_number_token(lngrd_Lexer *lexer);
 static void read_string_token(lngrd_Lexer *lexer);
 static void read_identifiable_token(lngrd_Lexer *lexer);
 static void read_keyword_token(lngrd_Lexer *lexer);
@@ -318,6 +334,11 @@ static lngrd_UInt hash_block(lngrd_Block *block);
 static lngrd_SInt compare_blocks(lngrd_Block *x, lngrd_Block *y);
 static int is_block_truthy(lngrd_Block *block);
 static void burn_pyre(lngrd_List *pyre);
+static lngrd_Number *create_number(lngrd_NumberLayout layout, lngrd_SInt value);
+static int string_to_number(const lngrd_String *string, lngrd_Number **result);
+static lngrd_SInt compare_numbers(lngrd_Number *left, lngrd_Number *right);
+static lngrd_UInt hash_number(lngrd_Number *number);
+static void destroy_number(lngrd_Number *number);
 static lngrd_String *create_string(char *bytes, size_t length);
 static lngrd_String *cstring_to_string(const char *cstring);
 static lngrd_String *bytes_to_string(const char *bytes, size_t length);
@@ -418,6 +439,15 @@ LNGRD_API void lngrd_progress_lexer(lngrd_Lexer *lexer)
         read_next_symbol(lexer);
         read_identifiable_token(lexer);
     }
+    else if (is_number_symbol(symbol))
+    {
+        read_number_token(lexer);
+    }
+    else if ((symbol == '-' || symbol == '+') && has_another_symbol(lexer) && is_number_symbol(peek_next_symbol(lexer)))
+    {
+        read_next_symbol(lexer);
+        read_number_token(lexer);
+    }
     else if (symbol == '"')
     {
         read_string_token(lexer);
@@ -484,7 +514,7 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
                 block = form->block;
                 type = block->type;
 
-                if (type == LNGRD_BLOCK_TYPE_STRING)
+                if (type == LNGRD_BLOCK_TYPE_NUMBER || type == LNGRD_BLOCK_TYPE_STRING)
                 {
                     completed = 1;
                 }
@@ -597,7 +627,32 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
                     continue;
                 }
 
-                if (tokenType == LNGRD_TOKEN_TYPE_STRING)
+                if (tokenType == LNGRD_TOKEN_TYPE_NUMBER)
+                {
+                    lngrd_Expression *expression;
+                    lngrd_LiteralForm *form;
+                    lngrd_Block *block;
+                    lngrd_Number *number;
+
+                    number = create_number(LNGRD_NUMBER_LAYOUT_32_0, 0);
+
+                    if (!string_to_number(&tokenValue, &number))
+                    {
+                        destroy_number(number);
+                        parser->errored = 1;
+                        return;
+                    }
+
+                    block = create_block(LNGRD_BLOCK_TYPE_NUMBER, number, 1);
+
+                    form = (lngrd_LiteralForm *) allocate(1, sizeof(lngrd_LiteralForm));
+                    form->block = block;
+
+                    expression = create_expression(LNGRD_EXPRESSION_TYPE_LITERAL, form);
+
+                    offer = create_block(LNGRD_BLOCK_TYPE_EXPRESSION, expression, 1);
+                }
+                else if (tokenType == LNGRD_TOKEN_TYPE_STRING)
                 {
                     lngrd_Expression *expression;
                     lngrd_LiteralForm *form;
@@ -1275,6 +1330,27 @@ static void read_comment_token(lngrd_Lexer *lexer)
     }
 }
 
+static void read_number_token(lngrd_Lexer *lexer)
+{
+    lexer->token.type = LNGRD_TOKEN_TYPE_NUMBER;
+
+    while (has_another_symbol(lexer))
+    {
+        char symbol;
+
+        symbol = peek_next_symbol(lexer);
+
+        if (!is_number_symbol(symbol))
+        {
+            return;
+        }
+        else
+        {
+            lexer->token.end++;
+        }
+    }
+}
+
 static void read_string_token(lngrd_Lexer *lexer)
 {
     lexer->token.type = LNGRD_TOKEN_TYPE_STRING;
@@ -1564,6 +1640,9 @@ static lngrd_UInt hash_block(lngrd_Block *block)
 {
     switch (block->type)
     {
+        case LNGRD_BLOCK_TYPE_NUMBER:
+            return hash_number((lngrd_Number *) block->data);
+
         case LNGRD_BLOCK_TYPE_STRING:
             return hash_string((lngrd_String *) block->data);
 
@@ -1587,6 +1666,9 @@ static lngrd_SInt compare_blocks(lngrd_Block *x, lngrd_Block *y)
 
     switch (x->type)
     {
+        case LNGRD_BLOCK_TYPE_NUMBER:
+            return compare_numbers((lngrd_Number *) x->data, (lngrd_Number *) y->data);
+
         case LNGRD_BLOCK_TYPE_STRING:
             return compare_strings((lngrd_String *) x->data, (lngrd_String *) y->data);
 
@@ -1601,6 +1683,9 @@ static int is_block_truthy(lngrd_Block *block)
 {
     switch (block->type)
     {
+        case LNGRD_BLOCK_TYPE_NUMBER:
+            return ((lngrd_Number *) block->data)->value != 0;
+
         case LNGRD_BLOCK_TYPE_STRING:
             return ((lngrd_String *) block->data)->length > 0;
 
@@ -1635,6 +1720,10 @@ static void burn_pyre(lngrd_List *pyre)
         {
             switch (fuel->type)
             {
+                case LNGRD_BLOCK_TYPE_NUMBER:
+                    destroy_number((lngrd_Number *) fuel->data);
+                    break;
+
                 case LNGRD_BLOCK_TYPE_STRING:
                     destroy_string((lngrd_String *) fuel->data);
                     break;
@@ -1659,6 +1748,100 @@ static void burn_pyre(lngrd_List *pyre)
             free(fuel);
         }
     }
+}
+
+static lngrd_Number *create_number(lngrd_NumberLayout layout, lngrd_SInt value)
+{
+    lngrd_Number *number;
+
+    number = (lngrd_Number *) allocate(1, sizeof(lngrd_Number));
+    number->layout = layout;
+    number->value = value;
+
+    return number;
+}
+
+static int string_to_number(const lngrd_String *string, lngrd_Number **result)
+{
+    static lngrd_UInt ten_to[] = {1UL, 10UL, 100UL, 1000UL, 10000UL, 100000UL, 1000000UL, 10000000UL, 100000000UL, 1000000000UL};
+    lngrd_UInt numeric;
+    int negative;
+    size_t index, place;
+
+    numeric = 0;
+    negative = 0;
+    index = 0;
+
+    if (string->bytes[0] == '-')
+    {
+        negative = 1;
+        index += 1;
+    }
+    else if (string->bytes[0] == '+')
+    {
+        index += 1;
+    }
+
+    for (; index < string->length; index++)
+    {
+        unsigned char digit;
+
+        digit = string->bytes[index];
+
+        if (digit != '0')
+        {
+            break;
+        }
+    }
+
+    for (place = string->length - index - 1; index < string->length; place--, index++)
+    {
+        unsigned char digit;
+
+        digit = string->bytes[index];
+        numeric += (digit - '0') * ten_to[place];
+
+        if (numeric > LNGRD_INT_LIMIT)
+        {
+            return 0;
+        }
+    }
+
+    (*result)->layout = LNGRD_NUMBER_LAYOUT_32_0;
+    (*result)->value = (lngrd_SInt) numeric;
+
+    if (negative)
+    {
+        (*result)->value *= -1;
+    }
+
+    return 1;
+}
+
+static lngrd_SInt compare_numbers(lngrd_Number *left, lngrd_Number *right)
+{
+    if (left->value < right->value)
+    {
+        return -1;
+    }
+    else if (left->value > right->value)
+    {
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
+}
+
+static lngrd_UInt hash_number(lngrd_Number *number)
+{
+    return (lngrd_UInt) number->value;
+}
+
+static void destroy_number(lngrd_Number *number)
+{
+    free(number);
 }
 
 static lngrd_String *create_string(char *bytes, size_t length)

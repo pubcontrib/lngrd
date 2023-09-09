@@ -4,6 +4,12 @@
 
 ## Language
 
+    # number
+    0
+    100
+    -100
+    +100
+
     # string
     ""
     "plain"
