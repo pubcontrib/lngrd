@@ -1122,6 +1122,10 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
                         break;
                     }
+                    else
+                    {
+                        set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, cstring_to_string(""), 0), executer);
+                    }
                 }
             }
             else if (expression->type == LNGRD_EXPRESSION_TYPE_LOOP)
