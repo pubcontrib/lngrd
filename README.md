@@ -44,4 +44,4 @@
     /
 
     # built-ins
-    @write
+    @add @write
