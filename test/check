@@ -190,5 +190,22 @@ test_code '(@write "/dev/stdout" catch \ (@add "" 0) /)' 'alien argument' 0
 test_code '(@write "/dev/stdout" catch \ (@add 0 "") /)' 'alien argument' 0
 test_code '(@write "/dev/stdout" catch \ (@add @write 0) /)' 'alien argument' 0
 test_code '(@write "/dev/stdout" catch \ (@add 0 @write) /)' 'alien argument' 0
+test_code 'if (@subtract 0 0) (@write "/dev/stdout" "x")' '' 0
+test_code 'if (@subtract 0 -1) (@write "/dev/stdout" "x")' 'x' 0
+test_code 'if (@subtract -1 -1) (@write "/dev/stdout" "x")' '' 0
+test_code 'if (@subtract 2147483647 0) (@write "/dev/stdout" "x")' 'x' 0
+test_code 'if (@subtract -2147483647 0) (@write "/dev/stdout" "x")' 'x' 0
+test_code '(@write "/dev/stdout" catch \ (@subtract 2147483647 -1) /)' 'arithmetic error' 0
+test_code '(@write "/dev/stdout" catch \ (@subtract -1 2147483647) /)' 'arithmetic error' 0
+test_code '(@write "/dev/stdout" catch \ (@subtract 2147483647 -2147483647) /)' 'arithmetic error' 0
+test_code '(@write "/dev/stdout" catch \ (@subtract -2147483647 1) /)' 'arithmetic error' 0
+test_code '(@write "/dev/stdout" catch \ (@subtract 1 -2147483647) /)' 'arithmetic error' 0
+test_code '(@write "/dev/stdout" catch \ (@subtract -2147483647 2147483647) /)' 'arithmetic error' 0
+test_code '(@write "/dev/stdout" catch \ (@subtract) /)' 'absent argument' 0
+test_code '(@write "/dev/stdout" catch \ (@subtract 0) /)' 'absent argument' 0
+test_code '(@write "/dev/stdout" catch \ (@subtract "" 0) /)' 'alien argument' 0
+test_code '(@write "/dev/stdout" catch \ (@subtract 0 "") /)' 'alien argument' 0
+test_code '(@write "/dev/stdout" catch \ (@subtract @write 0) /)' 'alien argument' 0
+test_code '(@write "/dev/stdout" catch \ (@subtract 0 @write) /)' 'alien argument' 0
 
 write_status 'PASS' 32
