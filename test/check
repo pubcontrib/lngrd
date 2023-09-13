@@ -207,5 +207,28 @@ test_code '(@write "/dev/stdout" catch \ (@subtract "" 0) /)' 'alien argument' 0
 test_code '(@write "/dev/stdout" catch \ (@subtract 0 "") /)' 'alien argument' 0
 test_code '(@write "/dev/stdout" catch \ (@subtract @write 0) /)' 'alien argument' 0
 test_code '(@write "/dev/stdout" catch \ (@subtract 0 @write) /)' 'alien argument' 0
+test_code 'if (@multiply 0 0) (@write "/dev/stdout" "x")' '' 0
+test_code 'if (@multiply 1 1) (@write "/dev/stdout" "x")' 'x' 0
+test_code 'if (@multiply 1 0) (@write "/dev/stdout" "x")' '' 0
+test_code 'if (@multiply 2147483647 1) (@write "/dev/stdout" "x")' 'x' 0
+test_code 'if (@multiply -2147483647 1) (@write "/dev/stdout" "x")' 'x' 0
+test_code '(@write "/dev/stdout" catch \ (@multiply 2147483647 2) /)' 'arithmetic error' 0
+test_code '(@write "/dev/stdout" catch \ (@multiply 2147483647 -2) /)' 'arithmetic error' 0
+test_code '(@write "/dev/stdout" catch \ (@multiply -2147483647 2) /)' 'arithmetic error' 0
+test_code '(@write "/dev/stdout" catch \ (@multiply -2147483647 -2) /)' 'arithmetic error' 0
+test_code '(@write "/dev/stdout" catch \ (@multiply 2 2147483647) /)' 'arithmetic error' 0
+test_code '(@write "/dev/stdout" catch \ (@multiply 2 -2147483647) /)' 'arithmetic error' 0
+test_code '(@write "/dev/stdout" catch \ (@multiply -2 2147483647) /)' 'arithmetic error' 0
+test_code '(@write "/dev/stdout" catch \ (@multiply -2 -2147483647) /)' 'arithmetic error' 0
+test_code '(@write "/dev/stdout" catch \ (@multiply 2147483647 2147483647) /)' 'arithmetic error' 0
+test_code '(@write "/dev/stdout" catch \ (@multiply 2147483647 -2147483647) /)' 'arithmetic error' 0
+test_code '(@write "/dev/stdout" catch \ (@multiply -2147483647 2147483647) /)' 'arithmetic error' 0
+test_code '(@write "/dev/stdout" catch \ (@multiply -2147483647 -2147483647) /)' 'arithmetic error' 0
+test_code '(@write "/dev/stdout" catch \ (@multiply) /)' 'absent argument' 0
+test_code '(@write "/dev/stdout" catch \ (@multiply 0) /)' 'absent argument' 0
+test_code '(@write "/dev/stdout" catch \ (@multiply "" 0) /)' 'alien argument' 0
+test_code '(@write "/dev/stdout" catch \ (@multiply 0 "") /)' 'alien argument' 0
+test_code '(@write "/dev/stdout" catch \ (@multiply @write 0) /)' 'alien argument' 0
+test_code '(@write "/dev/stdout" catch \ (@multiply 0 @write) /)' 'alien argument' 0
 
 write_status 'PASS' 32
