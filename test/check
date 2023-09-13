@@ -230,5 +230,22 @@ test_code '(@write "/dev/stdout" catch \ (@multiply "" 0) /)' 'alien argument' 0
 test_code '(@write "/dev/stdout" catch \ (@multiply 0 "") /)' 'alien argument' 0
 test_code '(@write "/dev/stdout" catch \ (@multiply @write 0) /)' 'alien argument' 0
 test_code '(@write "/dev/stdout" catch \ (@multiply 0 @write) /)' 'alien argument' 0
+test_code 'if (@divide 0 1) (@write "/dev/stdout" "x")' '' 0
+test_code 'if (@divide 1 1) (@write "/dev/stdout" "x")' 'x' 0
+test_code 'if (@divide 1 4) (@write "/dev/stdout" "x")' '' 0
+test_code 'if (@divide 2147483647 1) (@write "/dev/stdout" "x")' 'x' 0
+test_code 'if (@divide -2147483647 1) (@write "/dev/stdout" "x")' 'x' 0
+test_code '(@divide 2147483647 2147483647)' '' 0
+test_code '(@divide 2147483647 -2147483647)' '' 0
+test_code '(@divide -2147483647 2147483647)' '' 0
+test_code '(@divide -2147483647 -2147483647)' '' 0
+test_code '(@write "/dev/stdout" catch \ (@divide 1 0) /)' 'arithmetic error' 0
+test_code '(@write "/dev/stdout" catch \ (@divide -1 0) /)' 'arithmetic error' 0
+test_code '(@write "/dev/stdout" catch \ (@divide) /)' 'absent argument' 0
+test_code '(@write "/dev/stdout" catch \ (@divide 0) /)' 'absent argument' 0
+test_code '(@write "/dev/stdout" catch \ (@divide "" 0) /)' 'alien argument' 0
+test_code '(@write "/dev/stdout" catch \ (@divide 0 "") /)' 'alien argument' 0
+test_code '(@write "/dev/stdout" catch \ (@divide @write 0) /)' 'alien argument' 0
+test_code '(@write "/dev/stdout" catch \ (@divide 0 @write) /)' 'alien argument' 0
 
 write_status 'PASS' 32
