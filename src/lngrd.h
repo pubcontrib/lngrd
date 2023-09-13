@@ -104,6 +104,7 @@ typedef struct
 {
     lngrd_Block *key;
     lngrd_Block *value;
+    lngrd_UInt phase; /*0,unclaimed 1,occupied 2,vacant*/
 } lngrd_Pair;
 
 /*block associated array*/
@@ -2028,7 +2029,7 @@ static lngrd_Map *create_map(void)
 
     for (index = 0; index < map->capacity; index++)
     {
-        map->items[index].key = NULL;
+        map->items[index].phase = 0;
     }
 
     return map;
@@ -2051,12 +2052,16 @@ static lngrd_Block *get_map_item(lngrd_Map *map, lngrd_Block *key)
 
         pair = &map->items[index];
 
-        if (pair->key)
+        if (pair->phase == 1)
         {
             if (compare_blocks(key, pair->key) == 0)
             {
                 return pair->value;
             }
+        }
+        else if (pair->phase == 2)
+        {
+            continue;
         }
         else
         {
@@ -2084,7 +2089,7 @@ static void set_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_Block *block, l
 
         for (index = 0; index < map->capacity; index++)
         {
-            map->items[index].key = NULL;
+            map->items[index].phase = 0;
         }
 
         for (index = 0; index < oldLength; index++)
@@ -2093,7 +2098,7 @@ static void set_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_Block *block, l
 
             item = &oldItems[index];
 
-            if (item->key)
+            if (item->phase == 1)
             {
                 set_map_item(map, item->key, item->value, pyre);
             }
@@ -2115,7 +2120,7 @@ static void set_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_Block *block, l
 
         pair = &map->items[index];
 
-        if (pair->key)
+        if (pair->phase == 1)
         {
             if (compare_blocks(key, pair->key) == 0)
             {
@@ -2123,6 +2128,7 @@ static void set_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_Block *block, l
                 push_list_item(pyre, pair->value);
                 pair->key = key;
                 pair->value = block;
+
                 break;
             }
         }
@@ -2131,6 +2137,8 @@ static void set_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_Block *block, l
             map->length += 1;
             pair->key = key;
             pair->value = block;
+            pair->phase = 1;
+
             break;
         }
     }
@@ -2153,55 +2161,20 @@ static void unset_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_List *pyre)
 
         pair = &map->items[index];
 
-        if (pair->key)
+        if (pair->phase == 1)
         {
             if (compare_blocks(key, pair->key) == 0)
             {
                 push_list_item(pyre, pair->key);
                 push_list_item(pyre, pair->value);
-                pair->key = NULL;
+                pair->phase = 2;
 
                 break;
             }
         }
-        else
+        else if (pair->phase == 2)
         {
-            return;
-        }
-    }
-
-    index = tally;
-
-    for (tally = 0; tally < map->capacity; tally++, index++)
-    {
-        size_t next;
-        lngrd_Pair *source;
-
-        if (index == map->capacity)
-        {
-            index = 0;
-        }
-
-        next = index + 1;
-
-        if (next == map->capacity)
-        {
-            next = 0;
-        }
-
-        source = &map->items[next];
-
-        if (source->key)
-        {
-            if (hash_block(key) % map->capacity == hash_block(source->key) % map->capacity)
-            {
-                lngrd_Pair *destination;
-
-                destination = &map->items[index];
-                destination->key = source->key;
-                destination->value = source->value;
-                source->key = NULL;
-            }
+            continue;
         }
         else
         {
@@ -2220,7 +2193,7 @@ static void burn_map(lngrd_Map *map, lngrd_List *pyre)
 
         item = map->items[index];
 
-        if (item.key)
+        if (item.phase == 1)
         {
             push_list_item(pyre, item.key);
             push_list_item(pyre, item.value);
