@@ -269,5 +269,12 @@ test_code '(@write "/dev/stdout" catch \ (@increment 2147483647) /)' 'arithmetic
 test_code '(@write "/dev/stdout" catch \ (@increment) /)' 'absent argument' 0
 test_code '(@write "/dev/stdout" catch \ (@increment "") /)' 'alien argument' 0
 test_code '(@write "/dev/stdout" catch \ (@increment @write) /)' 'alien argument' 0
+test_code 'if (@decrement 1) (@write "/dev/stdout" "x")' '' 0
+test_code 'if (@decrement 0) (@write "/dev/stdout" "x")' 'x' 0
+test_code 'if (@decrement -2147483646) (@write "/dev/stdout" "x")' 'x' 0
+test_code '(@write "/dev/stdout" catch \ (@decrement -2147483647) /)' 'arithmetic error' 0
+test_code '(@write "/dev/stdout" catch \ (@decrement) /)' 'absent argument' 0
+test_code '(@write "/dev/stdout" catch \ (@decrement "") /)' 'alien argument' 0
+test_code '(@write "/dev/stdout" catch \ (@decrement @write) /)' 'alien argument' 0
 
 write_status 'PASS' 32

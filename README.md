@@ -44,4 +44,4 @@
     /
 
     # built-ins
-    @add @subtract @multiply @divide @modulo @increment @write
+    @add @subtract @multiply @divide @modulo @increment @decrement @write
