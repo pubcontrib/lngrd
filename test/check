@@ -362,5 +362,9 @@ test_code '(@write "/dev/stdout" catch \ (@equals 0 @equals) /)' 'alien argument
 test_code '(@write "/dev/stdout" catch \ (@equals) /)' 'absent argument' 0
 test_code '(@write "/dev/stdout" catch \ (@equals 0) /)' 'absent argument' 0
 test_code '(@write "/dev/stdout" catch \ (@equals "") /)' 'absent argument' 0
+test_code '(@write, "/dev/stdout", "text")' 'text' 0
+test_code '(@write,"/dev/stdout","text")' 'text' 0
+test_code 'if,"x",(@write,"/dev/stdout","x")' 'x' 0
+test_code 'if (@equals \1,2,3/ 3) (@write "/dev/stdout" "3")' '3' 0
 
 write_status 'PASS' 32

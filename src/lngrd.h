@@ -436,7 +436,7 @@ LNGRD_API void lngrd_progress_lexer(lngrd_Lexer *lexer)
     {
         read_whitespace_token(lexer);
     }
-    else if (symbol == '(' || symbol == ')' || symbol == '\\' || symbol == '/')
+    else if (symbol == '(' || symbol == ')' || symbol == '\\' || symbol == '/' || symbol == ',')
     {
         lexer->token.type = LNGRD_TOKEN_TYPE_KEYSYMBOL;
     }
@@ -864,6 +864,10 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
                         }
 
                         terminate = 1;
+                    }
+                    else if (symbol == ',')
+                    {
+                        continue;
                     }
                 }
             }
