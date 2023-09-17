@@ -333,6 +333,7 @@ static void do_divide_work(lngrd_Executer *executer, lngrd_List *arguments, lngr
 static void do_modulo_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
 static void do_increment_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
 static void do_decrement_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
+static void do_and_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
 static void do_write_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
 static void set_global_function(const char *name, void (*work)(lngrd_Executer *, lngrd_List *, lngrd_Stash *), lngrd_Executer *executer);
 static void set_executer_error(const char *message, lngrd_Executer *executer);
@@ -907,6 +908,7 @@ LNGRD_API void lngrd_start_executer(lngrd_Executer *executer)
     set_global_function("modulo", do_modulo_work, executer);
     set_global_function("increment", do_increment_work, executer);
     set_global_function("decrement", do_decrement_work, executer);
+    set_global_function("and", do_and_work, executer);
     set_global_function("write", do_write_work, executer);
 }
 
@@ -1817,6 +1819,25 @@ static void do_decrement_work(lngrd_Executer *executer, lngrd_List *arguments, l
     }
 
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, v->value - 1), 0), executer);
+}
+
+static void do_and_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities)
+{
+    lngrd_SInt *capacity;
+    lngrd_Block *left, *right;
+
+    capacity = (lngrd_SInt *) peek_stash_item(capacities);
+
+    if (*capacity < 3)
+    {
+        set_executer_error("absent argument", executer);
+        return;
+    }
+
+    left = arguments->items[arguments->length - *capacity + 1];
+    right = arguments->items[arguments->length - *capacity + 2];
+
+    set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, is_block_truthy(left) && is_block_truthy(right)), 0), executer);
 }
 
 static void do_write_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities)

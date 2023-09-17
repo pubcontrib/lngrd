@@ -276,5 +276,17 @@ test_code '(@write "/dev/stdout" catch \ (@decrement -2147483647) /)' 'arithmeti
 test_code '(@write "/dev/stdout" catch \ (@decrement) /)' 'absent argument' 0
 test_code '(@write "/dev/stdout" catch \ (@decrement "") /)' 'alien argument' 0
 test_code '(@write "/dev/stdout" catch \ (@decrement @write) /)' 'alien argument' 0
+test_code 'if (@and 0 0) (@write "/dev/stdout" "x")' '' 0
+test_code 'if (@and 0 1) (@write "/dev/stdout" "x")' '' 0
+test_code 'if (@and 1 0) (@write "/dev/stdout" "x")' '' 0
+test_code 'if (@and 1 1) (@write "/dev/stdout" "x")' 'x' 0
+test_code 'if (@and "" "") (@write "/dev/stdout" "x")' '' 0
+test_code 'if (@and "" "x") (@write "/dev/stdout" "x")' '' 0
+test_code 'if (@and "x" "") (@write "/dev/stdout" "x")' '' 0
+test_code 'if (@and "x" "x") (@write "/dev/stdout" "x")' 'x' 0
+test_code 'if (@and 1 "x") (@write "/dev/stdout" "x")' 'x' 0
+test_code '(@write "/dev/stdout" catch \ (@and) /)' 'absent argument' 0
+test_code '(@write "/dev/stdout" catch \ (@and 0) /)' 'absent argument' 0
+test_code '(@write "/dev/stdout" catch \ (@and "") /)' 'absent argument' 0
 
 write_status 'PASS' 32
