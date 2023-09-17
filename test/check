@@ -305,5 +305,24 @@ test_code 'if (@not 1) (@write "/dev/stdout" "x")' '' 0
 test_code 'if (@not "") (@write "/dev/stdout" "x")' 'x' 0
 test_code 'if (@not "x") (@write "/dev/stdout" "x")' '' 0
 test_code '(@write "/dev/stdout" catch \ (@not) /)' 'absent argument' 0
+test_code 'if (@precedes 0 100) (@write "/dev/stdout" "x")' 'x' 0
+test_code 'if (@precedes 100 0) (@write "/dev/stdout" "x")' '' 0
+test_code 'if (@precedes 100 100) (@write "/dev/stdout" "x")' '' 0
+test_code 'if (@precedes 0 -100) (@write "/dev/stdout" "x")' '' 0
+test_code 'if (@precedes -100 0) (@write "/dev/stdout" "x")' 'x' 0
+test_code 'if (@precedes -100 -100) (@write "/dev/stdout" "x")' '' 0
+test_code 'if (@precedes "a" "b") (@write "/dev/stdout" "x")' 'x' 0
+test_code 'if (@precedes "b" "a") (@write "/dev/stdout" "x")' '' 0
+test_code 'if (@precedes "a" "a") (@write "/dev/stdout" "x")' '' 0
+test_code 'if (@precedes "A" "a") (@write "/dev/stdout" "x")' 'x' 0
+test_code 'if (@precedes "a" "A") (@write "/dev/stdout" "x")' '' 0
+test_code 'if (@precedes "A" "A") (@write "/dev/stdout" "x")' '' 0
+test_code 'if (@precedes 100 "100") (@write "/dev/stdout" "x")' 'x' 0
+test_code 'if (@precedes "100" 100) (@write "/dev/stdout" "x")' '' 0
+test_code '(@write "/dev/stdout" catch \ (@precedes @precedes 0) /)' 'alien argument' 0
+test_code '(@write "/dev/stdout" catch \ (@precedes 0 @precedes) /)' 'alien argument' 0
+test_code '(@write "/dev/stdout" catch \ (@precedes) /)' 'absent argument' 0
+test_code '(@write "/dev/stdout" catch \ (@precedes 0) /)' 'absent argument' 0
+test_code '(@write "/dev/stdout" catch \ (@precedes "") /)' 'absent argument' 0
 
 write_status 'PASS' 32
