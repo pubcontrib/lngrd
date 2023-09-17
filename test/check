@@ -288,5 +288,17 @@ test_code 'if (@and 1 "x") (@write "/dev/stdout" "x")' 'x' 0
 test_code '(@write "/dev/stdout" catch \ (@and) /)' 'absent argument' 0
 test_code '(@write "/dev/stdout" catch \ (@and 0) /)' 'absent argument' 0
 test_code '(@write "/dev/stdout" catch \ (@and "") /)' 'absent argument' 0
+test_code 'if (@or 0 0) (@write "/dev/stdout" "x")' '' 0
+test_code 'if (@or 0 1) (@write "/dev/stdout" "x")' 'x' 0
+test_code 'if (@or 1 0) (@write "/dev/stdout" "x")' 'x' 0
+test_code 'if (@or 1 1) (@write "/dev/stdout" "x")' 'x' 0
+test_code 'if (@or "" "") (@write "/dev/stdout" "x")' '' 0
+test_code 'if (@or "" "x") (@write "/dev/stdout" "x")' 'x' 0
+test_code 'if (@or "x" "") (@write "/dev/stdout" "x")' 'x' 0
+test_code 'if (@or "x" "x") (@write "/dev/stdout" "x")' 'x' 0
+test_code 'if (@or 1 "x") (@write "/dev/stdout" "x")' 'x' 0
+test_code '(@write "/dev/stdout" catch \ (@or) /)' 'absent argument' 0
+test_code '(@write "/dev/stdout" catch \ (@or 0) /)' 'absent argument' 0
+test_code '(@write "/dev/stdout" catch \ (@or "") /)' 'absent argument' 0
 
 write_status 'PASS' 32
