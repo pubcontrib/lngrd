@@ -1057,7 +1057,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
                     for (index = 0; index < flow->phase - 1; index++)
                     {
-                        pop_list_item(arguments);
+                        push_list_item(pyre, pop_list_item(arguments));
                     }
 
                     if (flow->phase > form->arguments->length)
@@ -1082,6 +1082,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
                     if (flow->phase > 0)
                     {
                         push_list_item(arguments, executer->result);
+                        executer->result = NULL;
                     }
 
                     single = create_list();
@@ -1098,6 +1099,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
                     lngrd_SInt *capacity;
 
                     push_list_item(arguments, executer->result);
+                    executer->result = NULL;
                     function = arguments->items[arguments->length - flow->phase];
 
                     if (function->type != LNGRD_BLOCK_TYPE_FUNCTION)
@@ -1106,7 +1108,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
                         for (index = 0; index < flow->phase; index++)
                         {
-                            pop_list_item(arguments);
+                            push_list_item(pyre, pop_list_item(arguments));
                         }
 
                         set_executer_error("alien argument", executer);
