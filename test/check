@@ -343,5 +343,24 @@ test_code '(@write "/dev/stdout" catch \ (@succeeds 0 @succeeds) /)' 'alien argu
 test_code '(@write "/dev/stdout" catch \ (@succeeds) /)' 'absent argument' 0
 test_code '(@write "/dev/stdout" catch \ (@succeeds 0) /)' 'absent argument' 0
 test_code '(@write "/dev/stdout" catch \ (@succeeds "") /)' 'absent argument' 0
+test_code 'if (@equals 0 100) (@write "/dev/stdout" "x")' '' 0
+test_code 'if (@equals 100 0) (@write "/dev/stdout" "x")' '' 0
+test_code 'if (@equals 100 100) (@write "/dev/stdout" "x")' 'x' 0
+test_code 'if (@equals 0 -100) (@write "/dev/stdout" "x")' '' 0
+test_code 'if (@equals -100 0) (@write "/dev/stdout" "x")' '' 0
+test_code 'if (@equals -100 -100) (@write "/dev/stdout" "x")' 'x' 0
+test_code 'if (@equals "a" "b") (@write "/dev/stdout" "x")' '' 0
+test_code 'if (@equals "b" "a") (@write "/dev/stdout" "x")' '' 0
+test_code 'if (@equals "a" "a") (@write "/dev/stdout" "x")' 'x' 0
+test_code 'if (@equals "A" "a") (@write "/dev/stdout" "x")' '' 0
+test_code 'if (@equals "a" "A") (@write "/dev/stdout" "x")' '' 0
+test_code 'if (@equals "A" "A") (@write "/dev/stdout" "x")' 'x' 0
+test_code 'if (@equals 100 "100") (@write "/dev/stdout" "x")' '' 0
+test_code 'if (@equals "100" 100) (@write "/dev/stdout" "x")' '' 0
+test_code '(@write "/dev/stdout" catch \ (@equals @equals 0) /)' 'alien argument' 0
+test_code '(@write "/dev/stdout" catch \ (@equals 0 @equals) /)' 'alien argument' 0
+test_code '(@write "/dev/stdout" catch \ (@equals) /)' 'absent argument' 0
+test_code '(@write "/dev/stdout" catch \ (@equals 0) /)' 'absent argument' 0
+test_code '(@write "/dev/stdout" catch \ (@equals "") /)' 'absent argument' 0
 
 write_status 'PASS' 32
