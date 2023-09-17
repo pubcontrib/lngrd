@@ -339,6 +339,7 @@ static void do_not_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_S
 static void do_precedes_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
 static void do_succeeds_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
 static void do_equals_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
+static void do_length_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
 static void do_write_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
 static void set_global_function(const char *name, void (*work)(lngrd_Executer *, lngrd_List *, lngrd_Stash *), lngrd_Executer *executer);
 static void set_executer_error(const char *message, lngrd_Executer *executer);
@@ -923,6 +924,7 @@ LNGRD_API void lngrd_start_executer(lngrd_Executer *executer)
     set_global_function("precedes", do_precedes_work, executer);
     set_global_function("succeeds", do_succeeds_work, executer);
     set_global_function("equals", do_equals_work, executer);
+    set_global_function("length", do_length_work, executer);
     set_global_function("write", do_write_work, executer);
 }
 
@@ -1985,6 +1987,41 @@ static void do_equals_work(lngrd_Executer *executer, lngrd_List *arguments, lngr
     }
 
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, compare_blocks(left, right) == 0), 0), executer);
+}
+
+static void do_length_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities)
+{
+    lngrd_SInt *capacity;
+    lngrd_Block *value;
+    size_t length;
+
+    capacity = (lngrd_SInt *) peek_stash_item(capacities);
+
+    if (*capacity < 2)
+    {
+        set_executer_error("absent argument", executer);
+        return;
+    }
+
+    value = arguments->items[arguments->length - *capacity + 1];
+
+    if (value->type != LNGRD_BLOCK_TYPE_STRING)
+    {
+        set_executer_error("alien argument", executer);
+        return;
+    }
+
+    length = 0;
+
+    if (value->type == LNGRD_BLOCK_TYPE_STRING)
+    {
+        lngrd_String *data;
+
+        data = (lngrd_String *) value->data;
+        length = data->length;
+    }
+
+    set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, (lngrd_SInt) length), 0), executer);
 }
 
 static void do_write_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities)

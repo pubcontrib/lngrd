@@ -366,5 +366,12 @@ test_code '(@write, "/dev/stdout", "text")' 'text' 0
 test_code '(@write,"/dev/stdout","text")' 'text' 0
 test_code 'if,"x",(@write,"/dev/stdout","x")' 'x' 0
 test_code 'if (@equals \1,2,3/ 3) (@write "/dev/stdout" "3")' '3' 0
+test_code 'if (@equals (@length "") 0) (@write "/dev/stdout" "x")' 'x' 0
+test_code 'if (@equals (@length "1") 1) (@write "/dev/stdout" "x")' 'x' 0
+test_code 'if (@equals (@length " ") 1) (@write "/dev/stdout" "x")' 'x' 0
+test_code 'if (@equals (@length "123") 3) (@write "/dev/stdout" "x")' 'x' 0
+test_code '(@write "/dev/stdout" catch \ (@length 0) /)' 'alien argument' 0
+test_code '(@write "/dev/stdout" catch \ (@length @length) /)' 'alien argument' 0
+test_code '(@write "/dev/stdout" catch \ (@length) /)' 'absent argument' 0
 
 write_status 'PASS' 32
