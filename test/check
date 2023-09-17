@@ -300,5 +300,10 @@ test_code 'if (@or 1 "x") (@write "/dev/stdout" "x")' 'x' 0
 test_code '(@write "/dev/stdout" catch \ (@or) /)' 'absent argument' 0
 test_code '(@write "/dev/stdout" catch \ (@or 0) /)' 'absent argument' 0
 test_code '(@write "/dev/stdout" catch \ (@or "") /)' 'absent argument' 0
+test_code 'if (@not 0) (@write "/dev/stdout" "x")' 'x' 0
+test_code 'if (@not 1) (@write "/dev/stdout" "x")' '' 0
+test_code 'if (@not "") (@write "/dev/stdout" "x")' 'x' 0
+test_code 'if (@not "x") (@write "/dev/stdout" "x")' '' 0
+test_code '(@write "/dev/stdout" catch \ (@not) /)' 'absent argument' 0
 
 write_status 'PASS' 32
