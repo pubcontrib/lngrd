@@ -373,5 +373,16 @@ test_code 'if (@equals (@length "123") 3) (@write "/dev/stdout" "x")' 'x' 0
 test_code '(@write "/dev/stdout" catch \ (@length 0) /)' 'alien argument' 0
 test_code '(@write "/dev/stdout" catch \ (@length @length) /)' 'alien argument' 0
 test_code '(@write "/dev/stdout" catch \ (@length) /)' 'absent argument' 0
+test_code '(@write "/dev/stdout" (@merge "" ""))' '' 0
+test_code '(@write "/dev/stdout" (@merge "l" ""))' 'l' 0
+test_code '(@write "/dev/stdout" (@merge "" "r"))' 'r' 0
+test_code '(@write "/dev/stdout" (@merge "l" "r"))' 'lr' 0
+test_code '(@write "/dev/stdout" (@merge "ll" "rrrr"))' 'llrrrr' 0
+test_code '(@write "/dev/stdout" catch \ (@merge 0 "") /)' 'alien argument' 0
+test_code '(@write "/dev/stdout" catch \ (@merge "" 0) /)' 'alien argument' 0
+test_code '(@write "/dev/stdout" catch \ (@merge @merge "") /)' 'alien argument' 0
+test_code '(@write "/dev/stdout" catch \ (@merge "" @merge) /)' 'alien argument' 0
+test_code '(@write "/dev/stdout" catch \ (@merge) /)' 'absent argument' 0
+test_code '(@write "/dev/stdout" catch \ (@merge "") /)' 'absent argument' 0
 
 write_status 'PASS' 32

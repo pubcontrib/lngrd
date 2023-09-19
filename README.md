@@ -45,4 +45,4 @@
 
     # built-ins
     @add @subtract @multiply @divide @modulo @increment @decrement @and @or @not
-    @precedes @succeeds @equals @length @write
+    @precedes @succeeds @equals @length @merge @write
