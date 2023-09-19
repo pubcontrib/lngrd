@@ -340,6 +340,7 @@ static void do_precedes_work(lngrd_Executer *executer, lngrd_List *arguments, ln
 static void do_succeeds_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
 static void do_equals_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
 static void do_length_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
+static void do_slice_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
 static void do_merge_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
 static void do_write_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
 static void set_global_function(const char *name, void (*work)(lngrd_Executer *, lngrd_List *, lngrd_Stash *), lngrd_Executer *executer);
@@ -926,6 +927,7 @@ LNGRD_API void lngrd_start_executer(lngrd_Executer *executer)
     set_global_function("succeeds", do_succeeds_work, executer);
     set_global_function("equals", do_equals_work, executer);
     set_global_function("length", do_length_work, executer);
+    set_global_function("slice", do_slice_work, executer);
     set_global_function("merge", do_merge_work, executer);
     set_global_function("write", do_write_work, executer);
 }
@@ -2026,6 +2028,90 @@ static void do_length_work(lngrd_Executer *executer, lngrd_List *arguments, lngr
     }
 
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, (lngrd_SInt) length), 0), executer);
+}
+
+static void do_slice_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities)
+{
+    lngrd_SInt *capacity;
+    lngrd_Block *value, *start, *end;
+    lngrd_String *v;
+    lngrd_Number *s, *e;
+    lngrd_SInt left, right;
+    char *bytes;
+    size_t length;
+
+    capacity = (lngrd_SInt *) peek_stash_item(capacities);
+
+    if (*capacity < 4)
+    {
+        set_executer_error("absent argument", executer);
+        return;
+    }
+
+    value = arguments->items[arguments->length - *capacity + 1];
+
+    if (value->type != LNGRD_BLOCK_TYPE_STRING)
+    {
+        set_executer_error("alien argument", executer);
+        return;
+    }
+
+    start = arguments->items[arguments->length - *capacity + 2];
+
+    if (start->type != LNGRD_BLOCK_TYPE_NUMBER)
+    {
+        set_executer_error("alien argument", executer);
+        return;
+    }
+
+    end = arguments->items[arguments->length - *capacity + 3];
+
+    if (end->type != LNGRD_BLOCK_TYPE_NUMBER)
+    {
+        set_executer_error("alien argument", executer);
+        return;
+    }
+
+    v = (lngrd_String *) value->data;
+    s = (lngrd_Number *) start->data;
+    e = (lngrd_Number *) end->data;
+
+    left = s->value - 1;
+    right = e->value - 1;
+
+    if (left > right)
+    {
+        lngrd_SInt swap;
+
+        swap = left;
+        left = right;
+        right = swap;
+    }
+
+    if (left < 0)
+    {
+        left = 0;
+    }
+
+    if (right < 0 || (size_t) right >= v->length)
+    {
+        right = v->length - 1;
+    }
+
+    right += 1;
+    length = right - left;
+
+    if (length > 0)
+    {
+        bytes = (char *) allocate(length, sizeof(char));
+        memcpy(bytes, v->bytes + left, length);
+    }
+    else
+    {
+        bytes = NULL;
+    }
+
+    set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, create_string(bytes, length), 0), executer);
 }
 
 static void do_merge_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities)
