@@ -404,5 +404,33 @@ test_code '(@write "/dev/stdout" catch \ (@slice "" 0 @slice) /)' 'alien argumen
 test_code '(@write "/dev/stdout" catch \ (@slice) /)' 'absent argument' 0
 test_code '(@write "/dev/stdout" catch \ (@slice "") /)' 'absent argument' 0
 test_code '(@write "/dev/stdout" catch \ (@slice "" 0) /)' 'absent argument' 0
+test_code 'if (@equals (@length "\\\"\t\r\n") 5) (@write "/dev/stdout" "x")' 'x' 0
+test_code 'if (@equals (@length "\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f") 16) (@write "/dev/stdout" "x")' 'x' 0
+test_code 'if (@equals (@length "\x00\x10\x20\x30\x40\x50\x60\x70\x80\x90\xa0\xb0\xc0\xd0\xe0\xf0") 16) (@write "/dev/stdout" "x")' 'x' 0
+test_code 'if (@equals (@length "\x00\x11\x22\x33\x44\x55\x66\x77\x88\x99\xaa\xbb\xcc\xdd\xee\xff") 16) (@write "/dev/stdout" "x")' 'x' 0
+test_code '(@write "/dev/stdout" "line 1\nline 2\nline 3")' 'line 1
+line 2
+line 3' 0
+test_code '(@write "/dev/stdout" "line 1\x0aline 2\x0aline 3")' 'line 1
+line 2
+line 3' 0
+test_code '(@write "/dev/stdout" "\x74\x65\x78\x74")' 'text' 0
+test_code '(@write "/dev/stdout" "\x7c123\x7c")' '|123|' 0
+test_code '(@write "/dev/stdout" "\x7cabc\x7c")' '|abc|' 0
+test_code '"text" |@"variable" (@write "/dev/stdout" @"variable")' 'text' 0
+test_code '"text" |@"variable" (@write "/dev/stdout" @variable)' 'text' 0
+test_code '"text" |@variable (@write "/dev/stdout" @"variable")' 'text' 0
+test_code '"text" |@"" (@write "/dev/stdout" @"")' 'text' 0
+test_code '"text" |@"\"special\"" (@write "/dev/stdout" @"\"special\"")' 'text' 0
+test_code '"text" |@"\"special\"" %@"\"special\"" (@write "/dev/stdout" catch \ @"\"special\"" /)' 'absent variable' 0
+test_code '"\xFF"' '' 1
+test_code '"\z"' '' 1
+test_code '"\x"' '' 1
+test_code '"\x0"' '' 1
+test_code '"\x0z"' '' 1
+test_code '"\xz0"' '' 1
+test_code '@"\z"' '' 1
+test_code '"text" |@"\z"' '' 1
+test_code '%@"\z"' '' 1
 
 write_status 'PASS' 32

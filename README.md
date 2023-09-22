@@ -13,6 +13,8 @@
     # string
     ""
     "plain"
+    "\\ \" \n \r \t"
+    "\x00 \xff"
 
     # lookup
     @global

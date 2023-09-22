@@ -326,6 +326,8 @@ static int is_scope_symbol(char symbol);
 static int is_letter_symbol(char symbol);
 static int is_shorthand_symbol(char symbol);
 static int is_keyword_symbol(char symbol);
+static int parse_identifier(const lngrd_String *string, lngrd_String **result);
+static int unescape_string(const lngrd_String *string, lngrd_String **result);
 static void do_add_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
 static void do_subtract_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
 static void do_multiply_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
@@ -674,22 +676,18 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
                     lngrd_Expression *expression;
                     lngrd_LiteralForm *form;
                     lngrd_Block *block;
-                    char *bytes;
-                    size_t length;
+                    lngrd_String view, *string;
 
-                    length = token.end - token.start - 2;
+                    view.bytes = lexer->code->bytes + token.start + 1;
+                    view.length = token.end - token.start - 2;
 
-                    if (length > 0)
+                    if (!unescape_string(&view, &string))
                     {
-                        bytes = (char *) allocate(length, sizeof(char));
-                        memcpy(bytes, lexer->code->bytes + token.start + 1, length);
-                    }
-                    else
-                    {
-                        bytes = NULL;
+                        parser->errored = 1;
+                        return;
                     }
 
-                    block = create_block(LNGRD_BLOCK_TYPE_STRING, create_string(bytes, length), 1);
+                    block = create_block(LNGRD_BLOCK_TYPE_STRING, string, 1);
 
                     form = (lngrd_LiteralForm *) allocate(1, sizeof(lngrd_LiteralForm));
                     form->block = block;
@@ -705,12 +703,23 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
                     if (tokenValue.bytes[0] == '|')
                     {
                         lngrd_AssignForm *form;
+                        lngrd_String *name;
+                        lngrd_String view;
 
                         if (tokenValue.bytes[1] == '@')
                         {
+                            view.bytes = lexer->code->bytes + token.start + 1;
+                            view.length = token.end - token.start - 1;
+
+                            if (!parse_identifier(&view, &name))
+                            {
+                                parser->errored = 1;
+                                return;
+                            }
+
                             form = (lngrd_AssignForm *) allocate(1, sizeof(lngrd_AssignForm));
                             form->scope = LNGRD_SCOPE_TYPE_GLOBAL;
-                            form->name = create_block(LNGRD_BLOCK_TYPE_STRING, bytes_to_string(lexer->code->bytes + token.start + 2, token.end - token.start - 2), 1);
+                            form->name = create_block(LNGRD_BLOCK_TYPE_STRING, name, 1);
 
                             expression = create_expression(LNGRD_EXPRESSION_TYPE_ASSIGN, form);
                         }
@@ -723,12 +732,23 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
                     else if (tokenValue.bytes[0] == '%')
                     {
                         lngrd_UnassignForm *form;
+                        lngrd_String *name;
+                        lngrd_String view;
 
                         if (tokenValue.bytes[1] == '@')
                         {
+                            view.bytes = lexer->code->bytes + token.start + 1;
+                            view.length = token.end - token.start - 1;
+
+                            if (!parse_identifier(&view, &name))
+                            {
+                                parser->errored = 1;
+                                return;
+                            }
+
                             form = (lngrd_UnassignForm *) allocate(1, sizeof(lngrd_UnassignForm));
                             form->scope = LNGRD_SCOPE_TYPE_GLOBAL;
-                            form->name = create_block(LNGRD_BLOCK_TYPE_STRING, bytes_to_string(lexer->code->bytes + token.start + 2, token.end - token.start - 2), 1);
+                            form->name = create_block(LNGRD_BLOCK_TYPE_STRING, name, 1);
 
                             expression = create_expression(LNGRD_EXPRESSION_TYPE_UNASSIGN, form);
                         }
@@ -741,12 +761,23 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
                     else
                     {
                         lngrd_LookupForm *form;
+                        lngrd_String *name;
+                        lngrd_String view;
 
                         if (tokenValue.bytes[0] == '@')
                         {
+                            view.bytes = lexer->code->bytes + token.start;
+                            view.length = token.end - token.start;
+
+                            if (!parse_identifier(&view, &name))
+                            {
+                                parser->errored = 1;
+                                return;
+                            }
+
                             form = (lngrd_LookupForm *) allocate(1, sizeof(lngrd_LookupForm));
                             form->scope = LNGRD_SCOPE_TYPE_GLOBAL;
-                            form->name = create_block(LNGRD_BLOCK_TYPE_STRING, bytes_to_string(lexer->code->bytes + token.start + 1, token.end - token.start - 1), 1);
+                            form->name = create_block(LNGRD_BLOCK_TYPE_STRING, name, 1);
 
                             expression = create_expression(LNGRD_EXPRESSION_TYPE_LOOKUP, form);
                         }
@@ -1396,7 +1427,11 @@ static void read_number_token(lngrd_Lexer *lexer)
 
 static void read_string_token(lngrd_Lexer *lexer)
 {
+    int escaping, completed;
+
     lexer->token.type = LNGRD_TOKEN_TYPE_STRING;
+    escaping = 0;
+    completed = 0;
 
     while (has_another_symbol(lexer))
     {
@@ -1407,20 +1442,42 @@ static void read_string_token(lngrd_Lexer *lexer)
         if (symbol == '"')
         {
             read_next_symbol(lexer);
-            return;
+
+            if (escaping)
+            {
+                escaping = 0;
+            }
+            else
+            {
+                completed = 1;
+                break;
+            }
         }
-        else if (!is_string_symbol(symbol))
+        else if (symbol == '\\')
         {
-            lexer->errored = 1;
-            return;
+            read_next_symbol(lexer);
+            escaping = !escaping;
+        }
+        else if (is_string_symbol(symbol))
+        {
+            read_next_symbol(lexer);
+
+            if (escaping)
+            {
+                escaping = 0;
+            }
         }
         else
         {
-            lexer->token.end++;
+            break;
         }
     }
 
-    lexer->errored = 1;
+    if (!completed)
+    {
+        lexer->errored = 1;
+        return;
+    }
 }
 
 static void read_identifiable_token(lngrd_Lexer *lexer)
@@ -1560,6 +1617,254 @@ static int is_shorthand_symbol(char symbol)
 static int is_keyword_symbol(char symbol)
 {
     return symbol >= 'a' && symbol <= 'z';
+}
+
+static int parse_identifier(const lngrd_String *string, lngrd_String **result)
+{
+    lngrd_String view;
+
+    if (string->bytes[1] != '"')
+    {
+        view.bytes = string->bytes + 1;
+        view.length = string->length - 1;
+    }
+    else
+    {
+        view.bytes = string->bytes + 2;
+        view.length = string->length - 3;
+    }
+
+    return unescape_string(&view, result);
+}
+
+static int unescape_string(const lngrd_String *string, lngrd_String **result)
+{
+    char *bytes;
+    size_t index, length;
+
+    for (index = 0, length = 0; index < string->length; index++, length++)
+    {
+        if (string->bytes[index] == '\\')
+        {
+            index += 1;
+
+            if (string->bytes[index] == 'x' && index + 2 < string->length)
+            {
+                index += 2;
+            }
+        }
+    }
+
+    if (length == 0)
+    {
+        (*result) = create_string(NULL, 0);
+
+        return 1;
+    }
+
+    bytes = (char *) allocate(length, sizeof(char));
+
+    if (length == string->length)
+    {
+        memcpy(bytes, string->bytes, length);
+    }
+    else
+    {
+        size_t fill;
+
+        for (index = 0, fill = 0; index < string->length; index++)
+        {
+            if (string->bytes[index] != '\\')
+            {
+                bytes[fill++] = string->bytes[index];
+            }
+            else
+            {
+                switch (string->bytes[++index])
+                {
+                    case '\\':
+                        bytes[fill++] = '\\';
+                        break;
+
+                    case '"':
+                        bytes[fill++] = '"';
+                        break;
+
+                    case 'n':
+                        bytes[fill++] = '\n';
+                        break;
+
+                    case 'r':
+                        bytes[fill++] = '\r';
+                        break;
+
+                    case 't':
+                        bytes[fill++] = '\t';
+                        break;
+
+                    case 'x':
+                    {
+                        unsigned char byte;
+                        char symbol;
+
+                        byte = 0;
+
+                        switch (symbol = string->bytes[++index])
+                        {
+                            case '0':
+                                break;
+
+                            case '1':
+                                byte |= 16;
+                                break;
+
+                            case '2':
+                                byte |= 32;
+                                break;
+
+                            case '3':
+                                byte |= 48;
+                                break;
+
+                            case '4':
+                                byte |= 64;
+                                break;
+
+                            case '5':
+                                byte |= 80;
+                                break;
+
+                            case '6':
+                                byte |= 96;
+                                break;
+
+                            case '7':
+                                byte |= 112;
+                                break;
+
+                            case '8':
+                                byte |= 128;
+                                break;
+
+                            case '9':
+                                byte |= 144;
+                                break;
+
+                            case 'a':
+                                byte |= 160;
+                                break;
+
+                            case 'b':
+                                byte |= 176;
+                                break;
+
+                            case 'c':
+                                byte |= 192;
+                                break;
+
+                            case 'd':
+                                byte |= 208;
+                                break;
+
+                            case 'e':
+                                byte |= 224;
+                                break;
+
+                            case 'f':
+                                byte |= 240;
+                                break;
+
+                            default:
+                                free(bytes);
+                                return 0;
+                        }
+
+                        switch (symbol = string->bytes[++index])
+                        {
+                            case '0':
+                                break;
+
+                            case '1':
+                                byte |= 1;
+                                break;
+
+                            case '2':
+                                byte |= 2;
+                                break;
+
+                            case '3':
+                                byte |= 3;
+                                break;
+
+                            case '4':
+                                byte |= 4;
+                                break;
+
+                            case '5':
+                                byte |= 5;
+                                break;
+
+                            case '6':
+                                byte |= 6;
+                                break;
+
+                            case '7':
+                                byte |= 7;
+                                break;
+
+                            case '8':
+                                byte |= 8;
+                                break;
+
+                            case '9':
+                                byte |= 9;
+                                break;
+
+                            case 'a':
+                                byte |= 10;
+                                break;
+
+                            case 'b':
+                                byte |= 11;
+                                break;
+
+                            case 'c':
+                                byte |= 12;
+                                break;
+
+                            case 'd':
+                                byte |= 13;
+                                break;
+
+                            case 'e':
+                                byte |= 14;
+                                break;
+
+                            case 'f':
+                                byte |= 15;
+                                break;
+
+                            default:
+                                free(bytes);
+                                return 0;
+                        }
+
+                        bytes[fill++] = byte;
+
+                        break;
+                    }
+
+                    default:
+                        free(bytes);
+                        return 0;
+                }
+            }
+        }
+    }
+
+    (*result) = create_string(bytes, length);
+
+    return 1;
 }
 
 static void do_add_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities)
