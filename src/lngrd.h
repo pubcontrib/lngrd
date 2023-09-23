@@ -345,6 +345,7 @@ static void do_length_work(lngrd_Executer *executer, lngrd_List *arguments, lngr
 static void do_slice_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
 static void do_merge_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
 static void do_write_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
+static void do_type_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
 static void set_global_function(const char *name, void (*work)(lngrd_Executer *, lngrd_List *, lngrd_Stash *), lngrd_Executer *executer);
 static void set_executer_error(const char *message, lngrd_Executer *executer);
 static void set_executor_result(lngrd_Block *result, lngrd_Executer *executer);
@@ -961,6 +962,7 @@ LNGRD_API void lngrd_start_executer(lngrd_Executer *executer)
     set_global_function("slice", do_slice_work, executer);
     set_global_function("merge", do_merge_work, executer);
     set_global_function("write", do_write_work, executer);
+    set_global_function("type", do_type_work, executer);
 }
 
 LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *parser)
@@ -2551,6 +2553,52 @@ static void do_write_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd
     fclose(handle);
 
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, cstring_to_string(""), 0), executer);
+}
+
+static void do_type_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities)
+{
+    lngrd_SInt *capacity;
+    lngrd_Block *value;
+    char *type;
+
+    capacity = (lngrd_SInt *) peek_stash_item(capacities);
+
+    if (*capacity < 2)
+    {
+        set_executer_error("absent argument", executer);
+        return;
+    }
+
+    value = arguments->items[arguments->length - *capacity + 1];
+
+    switch (value->type)
+    {
+        case LNGRD_BLOCK_TYPE_NUMBER:
+            type = (char *) "number";
+            break;
+
+        case LNGRD_BLOCK_TYPE_STRING:
+            type = (char *) "string";
+            break;
+
+        case LNGRD_BLOCK_TYPE_LIST:
+            type = (char *) "list";
+            break;
+
+        case LNGRD_BLOCK_TYPE_MAP:
+            type = (char *) "map";
+            break;
+
+        case LNGRD_BLOCK_TYPE_FUNCTION:
+            type = (char *) "function";
+            break;
+
+        default:
+            crash_with_message("unsupported branch");
+            return;
+    }
+
+    set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, cstring_to_string(type), 0), executer);
 }
 
 static void set_global_function(const char *name, void (*work)(lngrd_Executer *, lngrd_List *, lngrd_Stash *), lngrd_Executer *executer)

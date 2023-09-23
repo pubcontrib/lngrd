@@ -432,5 +432,9 @@ test_code '"\xz0"' '' 1
 test_code '@"\z"' '' 1
 test_code '"text" |@"\z"' '' 1
 test_code '%@"\z"' '' 1
+test_code '(@write "/dev/stdout" (@type 0))' 'number' 0
+test_code '(@write "/dev/stdout" (@type ""))' 'string' 0
+test_code '(@write "/dev/stdout" (@type @type))' 'function' 0
+test_code '(@write "/dev/stdout" catch \ (@type) /)' 'absent argument' 0
 
 write_status 'PASS' 32
