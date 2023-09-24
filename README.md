@@ -47,4 +47,4 @@
 
     # built-ins
     @add @subtract @multiply @divide @modulo @increment @decrement @and @or @not
-    @precedes @succeeds @equals @length @slice @merge @write @query @type
+    @precedes @succeeds @equals @length @slice @merge @write @query @exit @type

@@ -442,5 +442,11 @@ test_code '(@write "/dev/stdout" catch \ (@query "__absent__") /)' 'absent envir
 test_code '(@write "/dev/stdout" catch \ (@query 0) /)' 'alien argument' 0
 test_code '(@write "/dev/stdout" catch \ (@query @query) /)' 'alien argument' 0
 test_code '(@write "/dev/stdout" catch \ (@query) /)' 'absent argument' 0
+test_code '(@exit 0)' '' 0
+test_code '(@exit 1)' '' 1
+test_code '(@exit 127)' '' 127
+test_code '(@exit 255)' '' 255
+test_code '(@write "/dev/stdout" catch \ (@exit -1) /)' 'damaged argument' 0
+test_code '(@write "/dev/stdout" catch \ (@exit 256) /)' 'damaged argument' 0
 
 write_status 'PASS' 32

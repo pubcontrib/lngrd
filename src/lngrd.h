@@ -346,6 +346,7 @@ static void do_slice_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd
 static void do_merge_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
 static void do_write_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
 static void do_query_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
+static void do_exit_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
 static void do_type_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
 static void set_global_function(const char *name, void (*work)(lngrd_Executer *, lngrd_List *, lngrd_Stash *), lngrd_Executer *executer);
 static void set_executer_error(const char *message, lngrd_Executer *executer);
@@ -964,6 +965,7 @@ LNGRD_API void lngrd_start_executer(lngrd_Executer *executer)
     set_global_function("merge", do_merge_work, executer);
     set_global_function("write", do_write_work, executer);
     set_global_function("query", do_query_work, executer);
+    set_global_function("exit", do_exit_work, executer);
     set_global_function("type", do_type_work, executer);
 }
 
@@ -2593,6 +2595,47 @@ static void do_query_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd
     }
 
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, cstring_to_string(text), 0), executer);
+}
+
+static void do_exit_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities)
+{
+    lngrd_SInt *capacity;
+    lngrd_Block *code;
+    lngrd_Number *c;
+
+    capacity = (lngrd_SInt *) peek_stash_item(capacities);
+
+    if (*capacity < 2)
+    {
+        set_executer_error("absent argument", executer);
+        return;
+    }
+
+    code = arguments->items[arguments->length - *capacity + 1];
+
+    if (code->type != LNGRD_BLOCK_TYPE_NUMBER)
+    {
+        set_executer_error("alien argument", executer);
+        return;
+    }
+
+    c = (lngrd_Number *) code->data;
+
+    if (c->layout != LNGRD_NUMBER_LAYOUT_32_0)
+    {
+        set_executer_error("damaged argument", executer);
+        return;
+    }
+
+    if (c->value < 0 || c->value > 255)
+    {
+        set_executer_error("damaged argument", executer);
+        return;
+    }
+
+    exit(c->value);
+
+    set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, cstring_to_string(""), 0), executer);
 }
 
 static void do_type_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities)
