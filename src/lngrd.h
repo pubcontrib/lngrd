@@ -344,6 +344,7 @@ static void do_equals_work(lngrd_Executer *executer, lngrd_List *arguments, lngr
 static void do_length_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
 static void do_slice_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
 static void do_merge_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
+static void do_read_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
 static void do_write_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
 static void do_query_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
 static void do_exit_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
@@ -963,6 +964,7 @@ LNGRD_API void lngrd_start_executer(lngrd_Executer *executer)
     set_global_function("length", do_length_work, executer);
     set_global_function("slice", do_slice_work, executer);
     set_global_function("merge", do_merge_work, executer);
+    set_global_function("read", do_read_work, executer);
     set_global_function("write", do_write_work, executer);
     set_global_function("query", do_query_work, executer);
     set_global_function("exit", do_exit_work, executer);
@@ -2494,6 +2496,115 @@ static void do_merge_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd
     }
 
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, create_string(bytes, length), 0), executer);
+}
+
+static void do_read_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities)
+{
+    lngrd_SInt *capacity;
+    lngrd_Block *file, *until;
+    lngrd_String *f, *u;
+    FILE *handle;
+    int terminated;
+    char terminator;
+    char *cstring, *buffer;
+    size_t fill, length;
+
+    capacity = (lngrd_SInt *) peek_stash_item(capacities);
+
+    if (*capacity < 3)
+    {
+        set_executer_error("absent argument", executer);
+        return;
+    }
+
+    file = arguments->items[arguments->length - *capacity + 1];
+
+    if (file->type != LNGRD_BLOCK_TYPE_STRING)
+    {
+        set_executer_error("alien argument", executer);
+        return;
+    }
+
+    until = arguments->items[arguments->length - *capacity + 2];
+
+    if (until->type != LNGRD_BLOCK_TYPE_STRING)
+    {
+        set_executer_error("alien argument", executer);
+        return;
+    }
+
+    f = (lngrd_String *) file->data;
+    u = (lngrd_String *) until->data;
+
+    terminated = u->length > 0;
+    terminator = terminated ? u->bytes[0] : '\0';
+
+    if (u->length > 1)
+    {
+        set_executer_error("damaged argument", executer);
+        return;
+    }
+
+    cstring = string_to_cstring(f);
+    handle = fopen(cstring, "rb");
+    free(cstring);
+
+    if (!handle)
+    {
+        set_executer_error("absent file", executer);
+        return;
+    }
+
+    fill = 0;
+    length = 64;
+    buffer = (char *) allocate(length, sizeof(char));
+
+    while (1)
+    {
+        int symbol;
+
+        symbol = getc(handle);
+
+        if (ferror(handle))
+        {
+            fclose(handle);
+            free(buffer);
+
+            set_executer_error("io error", executer);
+            return;
+        }
+
+        if (symbol == EOF || (terminated && terminator == symbol))
+        {
+            break;
+        }
+
+        buffer[fill++] = symbol;
+
+        if (fill == length)
+        {
+            char *swap;
+
+            if (!can_fit_both(length, length))
+            {
+                fclose(handle);
+                free(buffer);
+
+                set_executer_error("boundary error", executer);
+                return;
+            }
+
+            length *= 2;
+            swap = (char *) allocate(length, sizeof(char));
+            memcpy(swap, buffer, fill);
+            free(buffer);
+            buffer = swap;
+        }
+    }
+
+    fclose(handle);
+
+    set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, create_string(buffer, fill), 0), executer);
 }
 
 static void do_write_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities)

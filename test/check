@@ -448,5 +448,14 @@ test_code '(@exit 127)' '' 127
 test_code '(@exit 255)' '' 255
 test_code '(@write "/dev/stdout" catch \ (@exit -1) /)' 'damaged argument' 0
 test_code '(@write "/dev/stdout" catch \ (@exit 256) /)' 'damaged argument' 0
+test_code '(@write "/tmp/lngrd.txt" "text") (@write "/dev/stdout" (@read "/tmp/lngrd.txt" ""))' 'text' 0
+test_code '(@write "/tmp/lngrd.txt" "line 1\nline 2\nline 3") (@write "/dev/stdout" (@read "/tmp/lngrd.txt" "\n"))' 'line 1' 0
+test_code '(@write "/tmp/lngrd.txt" "line 1\nline 2\nline 3") (@write "/dev/stdout" (@read "/tmp/lngrd.txt" ""))' 'line 1
+line 2
+line 3' 0
+test_code '(@write "/dev/stdout" catch \ (@read "/dev/stdin" 0) /)' 'alien argument' 0
+test_code '(@write "/dev/stdout" catch \ (@read "/dev/stdin" @read) /)' 'alien argument' 0
+test_code '(@write "/dev/stdout" catch \ (@read) /)' 'absent argument' 0
+test_code '(@write "/dev/stdout" catch \ (@read "/dev/stdin") /)' 'absent argument' 0
 
 write_status 'PASS' 32
