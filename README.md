@@ -26,7 +26,7 @@
     %@variable
 
     # invoke
-    (@function "arg 1" "arg ..." "arg n")
+    (@function "argument 1" "argument ..." "argument n")
 
     # branch
     if "test" "pass"
