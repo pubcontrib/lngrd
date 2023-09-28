@@ -2504,11 +2504,11 @@ static void do_read_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_
 {
     lngrd_SInt *capacity;
     lngrd_Block *file, *until;
-    lngrd_String *f, *u;
+    lngrd_String *u;
     FILE *handle;
-    int terminated;
+    int terminated, closable;
     char terminator;
-    char *cstring, *buffer;
+    char *buffer;
     size_t fill, length;
 
     capacity = (lngrd_SInt *) peek_stash_item(capacities);
@@ -2521,7 +2521,7 @@ static void do_read_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_
 
     file = arguments->items[arguments->length - *capacity + 1];
 
-    if (file->type != LNGRD_BLOCK_TYPE_STRING)
+    if (file->type != LNGRD_BLOCK_TYPE_NUMBER && file->type != LNGRD_BLOCK_TYPE_STRING)
     {
         set_executer_error("alien argument", executer);
         return;
@@ -2535,7 +2535,6 @@ static void do_read_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_
         return;
     }
 
-    f = (lngrd_String *) file->data;
     u = (lngrd_String *) until->data;
 
     terminated = u->length > 0;
@@ -2547,9 +2546,47 @@ static void do_read_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_
         return;
     }
 
-    cstring = string_to_cstring(f);
-    handle = fopen(cstring, "rb");
-    free(cstring);
+    handle = NULL;
+    closable = 0;
+
+    if (file->type == LNGRD_BLOCK_TYPE_NUMBER)
+    {
+        lngrd_Number *f;
+        lngrd_Number in, out, err;
+
+        f = (lngrd_Number *) file->data;
+        in.value = 0;
+        in.layout = LNGRD_NUMBER_LAYOUT_32_0;
+        out.value = 1;
+        out.layout = LNGRD_NUMBER_LAYOUT_32_0;
+        err.value = 2;
+        err.layout = LNGRD_NUMBER_LAYOUT_32_0;
+
+        if (compare_numbers(f, &in) == 0)
+        {
+            handle = stdin;
+        }
+        else if (compare_numbers(f, &out) == 0)
+        {
+            handle = stdout;
+        }
+        else if (compare_numbers(f, &err) == 0)
+        {
+            handle = stderr;
+        }
+    }
+    else if (file->type == LNGRD_BLOCK_TYPE_STRING)
+    {
+        lngrd_String *f;
+        char *cstring;
+
+        f = (lngrd_String *) file->data;
+
+        cstring = string_to_cstring(f);
+        handle = fopen(cstring, "rb");
+        free(cstring);
+        closable = 1;
+    }
 
     if (!handle)
     {
@@ -2569,7 +2606,11 @@ static void do_read_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_
 
         if (ferror(handle))
         {
-            fclose(handle);
+            if (closable)
+            {
+                fclose(handle);
+            }
+
             free(buffer);
 
             set_executer_error("io error", executer);
@@ -2589,7 +2630,11 @@ static void do_read_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_
 
             if (!can_fit_both(length, length))
             {
-                fclose(handle);
+                if (closable)
+                {
+                    fclose(handle);
+                }
+
                 free(buffer);
 
                 set_executer_error("boundary error", executer);
@@ -2604,7 +2649,10 @@ static void do_read_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_
         }
     }
 
-    fclose(handle);
+    if (closable)
+    {
+        fclose(handle);
+    }
 
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, create_string(buffer, fill), 0), executer);
 }
@@ -2613,9 +2661,9 @@ static void do_write_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd
 {
     lngrd_SInt *capacity;
     lngrd_Block *file, *text;
-    lngrd_String *f, *t;
+    lngrd_String *t;
     FILE *handle;
-    char *cstring;
+    int closable;
 
     capacity = (lngrd_SInt *) peek_stash_item(capacities);
 
@@ -2627,7 +2675,7 @@ static void do_write_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd
 
     file = arguments->items[arguments->length - *capacity + 1];
 
-    if (file->type != LNGRD_BLOCK_TYPE_STRING)
+    if (file->type != LNGRD_BLOCK_TYPE_NUMBER && file->type != LNGRD_BLOCK_TYPE_STRING)
     {
         set_executer_error("alien argument", executer);
         return;
@@ -2641,18 +2689,55 @@ static void do_write_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd
         return;
     }
 
-    f = (lngrd_String *) file->data;
-    t = (lngrd_String *) text->data;
+    handle = NULL;
+    closable = 0;
 
-    cstring = string_to_cstring(f);
-    handle = fopen(cstring, "wb");
-    free(cstring);
+    if (file->type == LNGRD_BLOCK_TYPE_NUMBER)
+    {
+        lngrd_Number *f;
+        lngrd_Number in, out, err;
+
+        f = (lngrd_Number *) file->data;
+        in.value = 0;
+        in.layout = LNGRD_NUMBER_LAYOUT_32_0;
+        out.value = 1;
+        out.layout = LNGRD_NUMBER_LAYOUT_32_0;
+        err.value = 2;
+        err.layout = LNGRD_NUMBER_LAYOUT_32_0;
+
+        if (compare_numbers(f, &in) == 0)
+        {
+            handle = stdin;
+        }
+        else if (compare_numbers(f, &out) == 0)
+        {
+            handle = stdout;
+        }
+        else if (compare_numbers(f, &err) == 0)
+        {
+            handle = stderr;
+        }
+    }
+    else if (file->type == LNGRD_BLOCK_TYPE_STRING)
+    {
+        lngrd_String *f;
+        char *cstring;
+
+        f = (lngrd_String *) file->data;
+
+        cstring = string_to_cstring(f);
+        handle = fopen(cstring, "wb");
+        free(cstring);
+        closable = 1;
+    }
 
     if (!handle)
     {
         set_executer_error("absent file", executer);
         return;
     }
+
+    t = (lngrd_String *) text->data;
 
     if (t->length > 0)
     {
@@ -2661,13 +2746,19 @@ static void do_write_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd
 
     if (ferror(handle))
     {
-        fclose(handle);
+        if (closable)
+        {
+            fclose(handle);
+        }
 
         set_executer_error("io error", executer);
         return;
     }
 
-    fclose(handle);
+    if (closable)
+    {
+        fclose(handle);
+    }
 
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, cstring_to_string(""), 0), executer);
 }
@@ -2676,7 +2767,6 @@ static void do_delete_work(lngrd_Executer *executer, lngrd_List *arguments, lngr
 {
     lngrd_SInt *capacity;
     lngrd_Block *file;
-    lngrd_String *f;
     char *cstring;
     int status;
 
@@ -2690,15 +2780,29 @@ static void do_delete_work(lngrd_Executer *executer, lngrd_List *arguments, lngr
 
     file = arguments->items[arguments->length - *capacity + 1];
 
-    if (file->type != LNGRD_BLOCK_TYPE_STRING)
+    if (file->type != LNGRD_BLOCK_TYPE_NUMBER && file->type != LNGRD_BLOCK_TYPE_STRING)
     {
         set_executer_error("alien argument", executer);
         return;
     }
 
-    f = (lngrd_String *) file->data;
+    cstring = NULL;
 
-    cstring = string_to_cstring(f);
+    if (file->type == LNGRD_BLOCK_TYPE_STRING)
+    {
+        lngrd_String *f;
+
+        f = (lngrd_String *) file->data;
+
+        cstring = string_to_cstring(f);
+    }
+
+    if (!cstring)
+    {
+        set_executer_error("io error", executer);
+        return;
+    }
+
     status = remove(cstring);
     free(cstring);
 

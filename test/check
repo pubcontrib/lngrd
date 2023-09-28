@@ -168,8 +168,6 @@ test_code '(@write "/dev/stdout" if -1 "pass")' 'pass' 0
 test_code '(@write "/dev/stdout" if 100 "pass")' 'pass' 0
 test_code '(@write "/dev/stdout" if -100 "pass")' 'pass' 0
 test_code '1 |@1' '' 0
-test_code '(@write 1 "")' '' 1
-test_code '(@write "/dev/stdout" catch \ (@write 1 "") /)' 'alien argument' 0
 test_code '(@write "/dev/stdout" 1)' '' 1
 test_code '(@write "/dev/stdout" catch \ (@write "/dev/stdout" 1) /)' 'alien argument' 0
 test_code '(@write "/dev/stdout" if 0 "pass")' '' 0
@@ -459,5 +457,15 @@ test_code '(@write "/dev/stdout" catch \ (@read) /)' 'absent argument' 0
 test_code '(@write "/dev/stdout" catch \ (@read "/dev/stdin") /)' 'absent argument' 0
 test_code '(@write "/tmp/lngrd.txt" "text") (@delete "/tmp/lngrd.txt") (@write "/dev/stdout" catch \ (@read "/tmp/lngrd.txt" "") /)' 'absent file' 0
 test_code '(@write "/tmp/lngrd.txt" "text") (@delete "/tmp/lngrd.txt") (@write "/dev/stdout" catch \ (@delete "/tmp/lngrd.txt") /)' 'io error' 0
+test_code '(@write 1 "text")' 'text' 0
+test_code '(@write "/dev/stdout" catch \(@read 1 "") / )' 'io error' 0
+test_code '(@write "/dev/stdout" catch \(@read 2 "") / )' 'io error' 0
+test_code '(@write "/dev/stdout" catch \(@write 0 "text") / )' 'io error' 0
+test_code '(@write "/dev/stdout" catch \(@delete 0) / )' 'io error' 0
+test_code '(@write "/dev/stdout" catch \(@delete 1) / )' 'io error' 0
+test_code '(@write "/dev/stdout" catch \(@delete 2) / )' 'io error' 0
+test_code '(@write "/dev/stdout" catch \(@read 3 "") / )' 'absent file' 0
+test_code '(@write "/dev/stdout" catch \(@write 3 "text") / )' 'absent file' 0
+test_code '(@write "/dev/stdout" catch \(@delete 3) / )' 'io error' 0
 
 write_status 'PASS' 32
