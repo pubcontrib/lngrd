@@ -16,6 +16,9 @@
     "\\ \" \n \r \t"
     "\x00 \xff"
 
+    # function
+    <>
+
     # lookup
     @global
 

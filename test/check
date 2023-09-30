@@ -467,5 +467,13 @@ test_code '(@write "/dev/stdout" catch \(@delete 2) / )' 'io error' 0
 test_code '(@write "/dev/stdout" catch \(@read 3 "") / )' 'absent file' 0
 test_code '(@write "/dev/stdout" catch \(@write 3 "text") / )' 'absent file' 0
 test_code '(@write "/dev/stdout" catch \(@delete 3) / )' 'io error' 0
+test_code '<>' '' 0
+test_code '<(@write "/dev/stdout" "text")>' '' 0
+test_code '(<(@write "/dev/stdout" "text")>)' 'text' 0
+test_code '<(@write "/dev/stdout" "x")> |@f (@f) (@f) (@f)' 'xxx' 0
+test_code 'if <> (@write "/dev/stdout" "x")' '' 0
+test_code 'if < > (@write "/dev/stdout" "x")' '' 0
+test_code 'if <1> (@write "/dev/stdout" "x")' 'x' 0
+test_code '(catch \ throw <(@write "/dev/stdout" "help")> /)' 'help' 0
 
 write_status 'PASS' 32

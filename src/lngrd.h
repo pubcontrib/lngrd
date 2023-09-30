@@ -446,7 +446,7 @@ LNGRD_API void lngrd_progress_lexer(lngrd_Lexer *lexer)
     {
         read_whitespace_token(lexer);
     }
-    else if (symbol == '(' || symbol == ')' || symbol == '\\' || symbol == '/' || symbol == ',')
+    else if (symbol == '(' || symbol == ')' || symbol == '\\' || symbol == '/' || symbol == ',' || symbol == '<' || symbol == '>')
     {
         lexer->token.type = LNGRD_TOKEN_TYPE_KEYSYMBOL;
     }
@@ -541,6 +541,13 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
                 if (type == LNGRD_BLOCK_TYPE_NUMBER || type == LNGRD_BLOCK_TYPE_STRING)
                 {
                     completed = 1;
+                }
+                else if (type == LNGRD_BLOCK_TYPE_FUNCTION)
+                {
+                    lngrd_List *list;
+
+                    list = (lngrd_List *) block->data;
+                    push_list_item(list, offer);
                 }
             }
             else if (pending->type == LNGRD_EXPRESSION_TYPE_LOOKUP || pending->type == LNGRD_EXPRESSION_TYPE_ASSIGN || pending->type == LNGRD_EXPRESSION_TYPE_UNASSIGN)
@@ -904,6 +911,31 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
 
                         terminate = 1;
                     }
+                    else if (symbol == '<')
+                    {
+                        lngrd_Expression *expression;
+                        lngrd_LiteralForm *form;
+                        lngrd_Block *block;
+
+                        block = create_block(LNGRD_BLOCK_TYPE_FUNCTION, create_list(), 1);
+
+                        form = (lngrd_LiteralForm *) allocate(1, sizeof(lngrd_LiteralForm));
+                        form->block = block;
+
+                        expression = create_expression(LNGRD_EXPRESSION_TYPE_LITERAL, form);
+
+                        push_list_item(stack, create_block(LNGRD_BLOCK_TYPE_EXPRESSION, expression, 1));
+                    }
+                    else if (symbol == '>')
+                    {
+                        if (stack->length == 0 || ((lngrd_Expression *) peek_list_item(stack)->data)->type != LNGRD_EXPRESSION_TYPE_LITERAL)
+                        {
+                            parser->errored = 1;
+                            return;
+                        }
+
+                        terminate = 1;
+                    }
                     else if (symbol == ',')
                     {
                         continue;
@@ -1166,6 +1198,8 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
                     push_stash_item(flows, create_flow((lngrd_List *) function->data, 0, 0, 0));
                     flow->phase += 1;
                     sustain = 1;
+
+                    set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, cstring_to_string(""), 0), executer);
 
                     break;
                 }
