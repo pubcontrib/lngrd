@@ -82,8 +82,6 @@ test_code '@' '' 1
 test_code '|' '' 1
 test_code '@|' '' 1
 test_code '|@' '' 1
-test_code '$write' '' 1
-test_code '"text" |$variable' '' 1
 test_code '"text" |@variable (@write "/dev/stdout" @variable)' 'text' 0
 test_code '"text" |@variable |@clone (@write "/dev/stdout" @clone)' 'text' 0
 test_code '"text" |@variable |@variable (@write "/dev/stdout" @variable)' 'text' 0
@@ -475,5 +473,20 @@ test_code 'if <> (@write "/dev/stdout" "x")' '' 0
 test_code 'if < > (@write "/dev/stdout" "x")' '' 0
 test_code 'if <1> (@write "/dev/stdout" "x")' 'x' 0
 test_code '(catch \ throw <(@write "/dev/stdout" "help")> /)' 'help' 0
+test_code '"text" |$local (@write "/dev/stdout" $local)' 'text' 0
+test_code '"text" |$variable %$variable (@write "/dev/stdout" \ catch \ $variable / /)' 'absent variable' 0
+test_code '0 |$n (<1 |$n>) (<2 |$n>) (<3 |$n>) if (@equals $n 0) (@write "/dev/stdout" "x")' 'x' 0
+test_code '0 |@n (<1 |@n>) (<2 |@n>) (<3 |@n>) if (@equals @n 3) (@write "/dev/stdout" "x")' 'x' 0
+test_code '0 |$n (<> (<1 |$n>) (<2 |$n>) (<3 |$n>)) if (@equals $n 0) (@write "/dev/stdout" "x")' 'x' 0
+test_code '0 |@n (<> (<1 |@n>) (<2 |@n>) (<3 |@n>)) if (@equals @n 3) (@write "/dev/stdout" "x")' 'x' 0
+test_code '0 |$n (<> (<> (<1 |$n>) (<2 |$n>) (<3 |$n>))) if (@equals $n 0) (@write "/dev/stdout" "x")' 'x' 0
+test_code '0 |@n (<> (<> (<1 |@n>) (<2 |@n>) (<3 |@n>))) if (@equals @n 3) (@write "/dev/stdout" "x")' 'x' 0
+test_code '0 |$n <(@add $n 1) |$n> |$f (@write "/dev/stdout" catch \ ($f) /)' 'absent variable' 0
+test_code '0 |@n <(@add @n 1) |@n> |@f (@f) (@f) (@f) if (@equals @n 3) (@write "/dev/stdout" "x")' 'x' 0
+test_code '0 |$n (<(@write "/dev/stdout" catch \ $n /)> (<1 |$n>) (<2 |$n>) (<3 |$n>))' 'absent variable' 0
+test_code '0 |@n (<if (@equals @n 3) (@write "/dev/stdout" "x")> (<1 |@n>) (<2 |@n>) (<3 |@n>))' 'x' 0
+test_code '(<>)' '' 0
+test_code '"x" |@n (<@n |$n (@write "/dev/stdout" $n)>)' 'x' 0
+test_code '(<"x" |$n $n |@n>) (@write "/dev/stdout" @n)' 'x' 0
 
 write_status 'PASS' 32

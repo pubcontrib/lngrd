@@ -193,6 +193,7 @@ typedef struct
     lngrd_SInt errored;
     lngrd_Stash *flows;
     lngrd_List *arguments;
+    lngrd_List *locals;
     lngrd_Stash *capacities;
     lngrd_List *pyre;
     lngrd_Map *globals;
@@ -208,6 +209,7 @@ typedef struct
 /*classifier of identifier domain*/
 typedef enum
 {
+    LNGRD_SCOPE_TYPE_LOCAL,
     LNGRD_SCOPE_TYPE_GLOBAL
 } lngrd_ScopeType;
 
@@ -718,7 +720,7 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
                         lngrd_String *name;
                         lngrd_String view;
 
-                        if (tokenValue.bytes[1] == '@')
+                        if (tokenValue.bytes[1] == '$' || tokenValue.bytes[1] == '@')
                         {
                             view.bytes = lexer->code->bytes + token.start + 1;
                             view.length = token.end - token.start - 1;
@@ -730,7 +732,7 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
                             }
 
                             form = (lngrd_AssignForm *) allocate(1, sizeof(lngrd_AssignForm));
-                            form->scope = LNGRD_SCOPE_TYPE_GLOBAL;
+                            form->scope = tokenValue.bytes[1] == '$' ? LNGRD_SCOPE_TYPE_LOCAL : LNGRD_SCOPE_TYPE_GLOBAL;
                             form->name = create_block(LNGRD_BLOCK_TYPE_STRING, name, 1);
 
                             expression = create_expression(LNGRD_EXPRESSION_TYPE_ASSIGN, form);
@@ -747,7 +749,7 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
                         lngrd_String *name;
                         lngrd_String view;
 
-                        if (tokenValue.bytes[1] == '@')
+                        if (tokenValue.bytes[1] == '$' || tokenValue.bytes[1] == '@')
                         {
                             view.bytes = lexer->code->bytes + token.start + 1;
                             view.length = token.end - token.start - 1;
@@ -759,7 +761,7 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
                             }
 
                             form = (lngrd_UnassignForm *) allocate(1, sizeof(lngrd_UnassignForm));
-                            form->scope = LNGRD_SCOPE_TYPE_GLOBAL;
+                            form->scope = tokenValue.bytes[1] == '$' ? LNGRD_SCOPE_TYPE_LOCAL : LNGRD_SCOPE_TYPE_GLOBAL;
                             form->name = create_block(LNGRD_BLOCK_TYPE_STRING, name, 1);
 
                             expression = create_expression(LNGRD_EXPRESSION_TYPE_UNASSIGN, form);
@@ -776,7 +778,7 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
                         lngrd_String *name;
                         lngrd_String view;
 
-                        if (tokenValue.bytes[0] == '@')
+                        if (tokenValue.bytes[0] == '$' || tokenValue.bytes[0] == '@')
                         {
                             view.bytes = lexer->code->bytes + token.start;
                             view.length = token.end - token.start;
@@ -788,7 +790,7 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
                             }
 
                             form = (lngrd_LookupForm *) allocate(1, sizeof(lngrd_LookupForm));
-                            form->scope = LNGRD_SCOPE_TYPE_GLOBAL;
+                            form->scope = tokenValue.bytes[0] == '$' ? LNGRD_SCOPE_TYPE_LOCAL : LNGRD_SCOPE_TYPE_GLOBAL;
                             form->name = create_block(LNGRD_BLOCK_TYPE_STRING, name, 1);
 
                             expression = create_expression(LNGRD_EXPRESSION_TYPE_LOOKUP, form);
@@ -977,6 +979,7 @@ LNGRD_API void lngrd_start_executer(lngrd_Executer *executer)
     executer->globals = create_map();
     executer->flows = create_stash();
     executer->arguments = create_list();
+    executer->locals = create_list();
     executer->capacities = create_stash();
     executer->pyre = create_list();
     executer->result = NULL;
@@ -1003,12 +1006,15 @@ LNGRD_API void lngrd_start_executer(lngrd_Executer *executer)
     set_global_function("query", do_query_work, executer);
     set_global_function("exit", do_exit_work, executer);
     set_global_function("type", do_type_work, executer);
+
+    push_list_item(executer->locals, create_block(LNGRD_BLOCK_TYPE_MAP, create_map(), 1));
 }
 
 LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *parser)
 {
     lngrd_Stash *flows;
     lngrd_List *arguments;
+    lngrd_List *locals;
     lngrd_Stash *capacities;
     lngrd_List *pyre;
     lngrd_List *expressions;
@@ -1020,6 +1026,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
     flows = executer->flows;
     arguments = executer->arguments;
+    locals = executer->locals;
     capacities = executer->capacities;
     pyre = executer->pyre;
     expressions = create_list();
@@ -1079,7 +1086,25 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
                 lngrd_Block *block;
 
                 form = (lngrd_LookupForm *) expression->form;
-                block = get_map_item(executer->globals, form->name);
+
+                if (form->scope == LNGRD_SCOPE_TYPE_LOCAL)
+                {
+                    if (!peek_list_item(locals))
+                    {
+                        pop_list_item(locals);
+                        push_list_item(locals, create_block(LNGRD_BLOCK_TYPE_MAP, create_map(), 1));
+                    }
+
+                    block = get_map_item((lngrd_Map *) peek_list_item(locals)->data, form->name);
+                }
+                else if (form->scope == LNGRD_SCOPE_TYPE_GLOBAL)
+                {
+                    block = get_map_item(executer->globals, form->name);
+                }
+                else
+                {
+                    block = NULL;
+                }
 
                 if (block)
                 {
@@ -1105,7 +1130,21 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
                 form->name->references++;
                 executer->result->references++;
-                set_map_item(executer->globals, form->name, executer->result, executer->pyre);
+
+                if (form->scope == LNGRD_SCOPE_TYPE_LOCAL)
+                {
+                    if (!peek_list_item(locals))
+                    {
+                        pop_list_item(locals);
+                        push_list_item(locals, create_block(LNGRD_BLOCK_TYPE_MAP, create_map(), 1));
+                    }
+
+                    set_map_item((lngrd_Map *) peek_list_item(locals)->data, form->name, executer->result, executer->pyre);
+                }
+                else if (form->scope == LNGRD_SCOPE_TYPE_GLOBAL)
+                {
+                    set_map_item(executer->globals, form->name, executer->result, executer->pyre);
+                }
             }
             else if (expression->type == LNGRD_EXPRESSION_TYPE_UNASSIGN)
             {
@@ -1113,7 +1152,21 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
                 form = (lngrd_UnassignForm *) expression->form;
 
-                unset_map_item(executer->globals, form->name, executer->pyre);
+                if (form->scope == LNGRD_SCOPE_TYPE_LOCAL)
+                {
+                    if (!peek_list_item(locals))
+                    {
+                        pop_list_item(locals);
+                        push_list_item(locals, create_block(LNGRD_BLOCK_TYPE_MAP, create_map(), 1));
+                    }
+
+                    unset_map_item((lngrd_Map *) peek_list_item(locals)->data, form->name, executer->pyre);
+                }
+                else if (form->scope == LNGRD_SCOPE_TYPE_GLOBAL)
+                {
+                    unset_map_item(executer->globals, form->name, executer->pyre);
+                }
+
                 set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, cstring_to_string(""), 0), executer);
             }
             else if (expression->type == LNGRD_EXPRESSION_TYPE_INVOKE)
@@ -1140,6 +1193,15 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
                     if (flow->phase > form->arguments->length)
                     {
                         free(pop_stash_item(capacities));
+
+                        if (peek_list_item(locals))
+                        {
+                            push_list_item(pyre, pop_list_item(locals));
+                        }
+                        else
+                        {
+                            pop_list_item(locals);
+                        }
                     }
 
                     if (!executer->errored)
@@ -1195,6 +1257,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
                     capacity = (lngrd_SInt *) allocate(1, sizeof(lngrd_SInt));
                     capacity[0] = flow->phase;
                     push_stash_item(capacities, capacity);
+                    push_list_item(locals, NULL);
                     push_stash_item(flows, create_flow((lngrd_List *) function->data, 0, 0, 0));
                     flow->phase += 1;
                     sustain = 1;
@@ -1374,7 +1437,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
         }
     }
 
-    if (flows->length > 0 || arguments->length > 0 || capacities->length > 0)
+    if (flows->length > 0 || arguments->length > 0 || locals->length > 1 || capacities->length > 0)
     {
         crash_with_message("stack leaked");
     }
@@ -1391,6 +1454,7 @@ LNGRD_API void lngrd_stop_executer(lngrd_Executer *executer)
     {
         destroy_stash(executer->flows);
         burn_list(executer->arguments, pyre);
+        burn_list(executer->locals, pyre);
         destroy_stash(executer->capacities);
         burn_map(executer->globals, pyre);
 

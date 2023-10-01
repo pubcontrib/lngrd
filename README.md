@@ -20,6 +20,7 @@
     <>
 
     # lookup
+    $local
     @global
 
     # assign
