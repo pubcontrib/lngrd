@@ -44,6 +44,9 @@
     # throw
     throw "error"
 
+    # argument
+    argument "index"
+
     # group
     \
       # expressions

@@ -488,5 +488,33 @@ test_code '0 |@n (<if (@equals @n 3) (@write "/dev/stdout" "x")> (<1 |@n>) (<2 |
 test_code '(<>)' '' 0
 test_code '"x" |@n (<@n |$n (@write "/dev/stdout" $n)>)' 'x' 0
 test_code '(<"x" |$n $n |@n>) (@write "/dev/stdout" @n)' 'x' 0
+test_code '(<(@write "/dev/stdout" argument 1)> "a" "b" "c")' 'a' 0
+test_code '(<(@write "/dev/stdout" argument 2)> "a" "b" "c")' 'b' 0
+test_code '(<(@write "/dev/stdout" argument 3)> "a" "b" "c")' 'c' 0
+test_code '<(@write "/dev/stdout" argument 1)> |$out ($out "a") ($out "b") ($out "c")' 'abc' 0
+test_code '(<(@write "/dev/stdout" (@merge argument 1 "!"))> "x")' 'x!' 0
+test_code '(@write "/dev/stdout" (<argument 1> "x"))' 'x' 0
+test_code '(@write "/dev/stdout" (<(@merge argument 1 (@merge argument 1 argument 1))> "x"))' 'xxx' 0
+test_code '(@write "/dev/stdout" (<argument 1 |$argument (@merge $argument "!")> "x"))' 'x!' 0
+test_code '<
+  argument 1 |$i
+  (@write "/dev/stdout" "x")
+  if (@precedes $i 5)
+    (@recurse (@add $i 1))
+> |@recurse (@recurse 1)' 'xxxxx' 0
+test_code '<
+  argument 1 |$self
+  argument 2 |$i
+  (@write "/dev/stdout" "x")
+  if (@precedes $i 5)
+    ($self $self (@add $i 1))
+> |$recurse ($recurse $recurse 1)' 'xxxxx' 0
+test_code '(@write "/dev/stdout" catch \ (<(@write "/dev/stdout" argument 0)> "a" "b" "c") /)' 'absent argument' 0
+test_code '(@write "/dev/stdout" catch \ (<(@write "/dev/stdout" argument 4)> "a" "b" "c") /)' 'absent argument' 0
+test_code '(@write "/dev/stdout" catch \ argument 1 /)' 'absent argument' 0
+test_code '(@write "/dev/stdout" catch \ (<argument 1>) /)' 'absent argument' 0
+test_code '(@write "/dev/stdout" catch \ (<argument 1> "x") argument 1 /)' 'absent argument' 0
+test_code '(@write "/dev/stdout" catch \ (<(@write "/dev/stdout" argument "")> "a" "b" "c") /)' 'alien argument' 0
+test_code '(@write "/dev/stdout" catch \ (<(@write "/dev/stdout" argument <>)> "a" "b" "c") /)' 'alien argument' 0
 
 write_status 'PASS' 32

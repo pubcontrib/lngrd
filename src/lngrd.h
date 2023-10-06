@@ -127,6 +127,7 @@ typedef enum
     LNGRD_EXPRESSION_TYPE_LOOP,
     LNGRD_EXPRESSION_TYPE_CATCH,
     LNGRD_EXPRESSION_TYPE_THROW,
+    LNGRD_EXPRESSION_TYPE_ARGUMENT,
     LNGRD_EXPRESSION_TYPE_GROUP,
     LNGRD_EXPRESSION_TYPE_NATIVE
 } lngrd_ExpressionType;
@@ -266,6 +267,12 @@ typedef struct
     lngrd_Block *error;
 } lngrd_ThrowForm;
 
+/*argument expression form*/
+typedef struct
+{
+    lngrd_Block *index;
+} lngrd_ArgumentForm;
+
 /*group expression form*/
 typedef struct
 {
@@ -285,6 +292,7 @@ typedef struct
     size_t index;
     lngrd_SInt ownership; /*0,none 1,own-list 2,own-list-and-items*/
     lngrd_UInt phase;
+    lngrd_UInt checkpoint;
 } lngrd_Flow;
 
 /*checks if the run-time environment meets minimum requirements*/
@@ -390,7 +398,7 @@ static void push_stash_item(lngrd_Stash *stash, void *item);
 static void *pop_stash_item(lngrd_Stash *stash);
 static void *peek_stash_item(lngrd_Stash *stash);
 static void destroy_stash(lngrd_Stash *stash);
-static lngrd_Flow *create_flow(lngrd_List *expressions, size_t index, lngrd_SInt ownership, lngrd_UInt phase);
+static lngrd_Flow *create_flow(lngrd_List *expressions, size_t index, lngrd_SInt ownership, lngrd_UInt phase, lngrd_UInt checkpoint);
 static void burn_flow(lngrd_Flow *flow, lngrd_List *pyre);
 static int can_fit_both(size_t left, size_t right);
 static void *allocate(size_t number, size_t size);
@@ -609,6 +617,14 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
 
                 form = (lngrd_ThrowForm *) pending->form;
                 form->error = offer;
+                completed = 1;
+            }
+            else if (pending->type == LNGRD_EXPRESSION_TYPE_ARGUMENT)
+            {
+                lngrd_ArgumentForm *form;
+
+                form = (lngrd_ArgumentForm *) pending->form;
+                form->index = offer;
                 completed = 1;
             }
             else if (pending->type == LNGRD_EXPRESSION_TYPE_GROUP)
@@ -862,6 +878,19 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
 
                         continue;
                     }
+                    else if (is_keyword_match(&tokenValue, "argument"))
+                    {
+                        lngrd_ArgumentForm *form;
+
+                        form = (lngrd_ArgumentForm *) allocate(1, sizeof(lngrd_ArgumentForm));
+                        form->index = NULL;
+
+                        expression = create_expression(LNGRD_EXPRESSION_TYPE_ARGUMENT, form);
+
+                        push_list_item(stack, create_block(LNGRD_BLOCK_TYPE_EXPRESSION, expression, 1));
+
+                        continue;
+                    }
                 }
                 else if (tokenType == LNGRD_TOKEN_TYPE_KEYSYMBOL)
                 {
@@ -1051,7 +1080,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
         return;
     }
 
-    push_stash_item(flows, create_flow(expressions, 0, 2, 0));
+    push_stash_item(flows, create_flow(expressions, 0, 2, 0, 0));
 
     while (flows->length > 0)
     {
@@ -1226,7 +1255,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
                     single = create_list();
                     push_list_item(single, form->arguments->items[flow->phase]);
-                    push_stash_item(flows, create_flow(single, 0, 1, 0));
+                    push_stash_item(flows, create_flow(single, 0, 1, 0, flow->checkpoint));
                     flow->phase += 1;
                     sustain = 1;
 
@@ -1235,7 +1264,9 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
                 else if (flow->phase == form->arguments->length)
                 {
                     lngrd_Block *function;
+                    lngrd_List *expressions;
                     lngrd_SInt *capacity;
+                    lngrd_UInt checkpoint;
 
                     push_list_item(arguments, executer->result);
                     executer->result = NULL;
@@ -1254,11 +1285,33 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
                         break;
                     }
 
+                    expressions = (lngrd_List *) function->data;
+                    checkpoint = executer->arguments->length;
+
+                    if (expressions->length == 1)
+                    {
+                        lngrd_Block *block;
+
+                        block = expressions->items[0];
+
+                        if (block->type == LNGRD_BLOCK_TYPE_EXPRESSION)
+                        {
+                            lngrd_Expression *expression;
+
+                            expression = (lngrd_Expression *) block->data;
+
+                            if (expression->type == LNGRD_EXPRESSION_TYPE_NATIVE)
+                            {
+                                checkpoint = flow->checkpoint;
+                            }
+                        }
+                    }
+
                     capacity = (lngrd_SInt *) allocate(1, sizeof(lngrd_SInt));
                     capacity[0] = flow->phase;
                     push_stash_item(capacities, capacity);
                     push_list_item(locals, NULL);
-                    push_stash_item(flows, create_flow((lngrd_List *) function->data, 0, 0, 0));
+                    push_stash_item(flows, create_flow(expressions, 0, 0, 0, checkpoint));
                     flow->phase += 1;
                     sustain = 1;
 
@@ -1279,7 +1332,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
                     single = create_list();
                     push_list_item(single, form->test);
-                    push_stash_item(flows, create_flow(single, 0, 1, 0));
+                    push_stash_item(flows, create_flow(single, 0, 1, 0, flow->checkpoint));
                     flow->phase = 1;
                     sustain = 1;
 
@@ -1293,7 +1346,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
                         single = create_list();
                         push_list_item(single, form->pass);
-                        push_stash_item(flows, create_flow(single, 0, 1, 0));
+                        push_stash_item(flows, create_flow(single, 0, 1, 0, flow->checkpoint));
                         flow->phase = 2;
                         sustain = 1;
 
@@ -1317,7 +1370,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
                     single = create_list();
                     push_list_item(single, form->test);
-                    push_stash_item(flows, create_flow(single, 0, 1, 0));
+                    push_stash_item(flows, create_flow(single, 0, 1, 0, flow->checkpoint));
                     flow->phase = 1;
                     sustain = 1;
 
@@ -1331,7 +1384,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
                         single = create_list();
                         push_list_item(single, form->body);
-                        push_stash_item(flows, create_flow(single, 0, 1, 0));
+                        push_stash_item(flows, create_flow(single, 0, 1, 0, flow->checkpoint));
                         flow->phase = 0;
                         sustain = 1;
 
@@ -1362,7 +1415,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
                     single = create_list();
                     push_list_item(single, form->failable);
-                    push_stash_item(flows, create_flow(single, 0, 1, 0));
+                    push_stash_item(flows, create_flow(single, 0, 1, 0, flow->checkpoint));
                     flow->phase = 1;
                     sustain = 1;
 
@@ -1392,7 +1445,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
                     single = create_list();
                     push_list_item(single, form->error);
-                    push_stash_item(flows, create_flow(single, 0, 1, 0));
+                    push_stash_item(flows, create_flow(single, 0, 1, 0, flow->checkpoint));
                     flow->phase = 1;
                     sustain = 1;
 
@@ -1405,12 +1458,77 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
                 break;
             }
+            else if (expression->type == LNGRD_EXPRESSION_TYPE_ARGUMENT)
+            {
+                lngrd_ArgumentForm *form;
+
+                form = (lngrd_ArgumentForm *) expression->form;
+
+                if (flow->phase == 0)
+                {
+                    lngrd_List *single;
+
+                    single = create_list();
+                    push_list_item(single, form->index);
+                    push_stash_item(flows, create_flow(single, 0, 1, 0, flow->checkpoint));
+                    flow->phase = 1;
+                    sustain = 1;
+
+                    break;
+                }
+                else if (flow->phase == 1)
+                {
+                    lngrd_Number *index;
+                    lngrd_SInt limit;
+
+                    if (executer->result->type != LNGRD_BLOCK_TYPE_NUMBER)
+                    {
+                        set_executer_error("alien argument", executer);
+
+                        break;
+                    }
+
+                    index = (lngrd_Number *) executer->result->data;
+
+                    if (index->layout != LNGRD_NUMBER_LAYOUT_32_0)
+                    {
+                        set_executer_error("damaged argument", executer);
+
+                        break;
+                    }
+
+                    if (executer->capacities->length > 0)
+                    {
+                        lngrd_SInt *capacity;
+
+                        capacity = (lngrd_SInt *) peek_stash_item(executer->capacities);
+                        limit = *capacity - 1;
+                    }
+                    else
+                    {
+                        limit = 0;
+                    }
+
+                    if (index->value < 1 || index->value > limit)
+                    {
+                        set_executer_error("absent argument", executer);
+
+                        break;
+                    }
+
+                    set_executor_result(executer->arguments->items[flow->checkpoint - limit - 1 + index->value], executer);
+                    flow->phase = 2;
+                    sustain = 1;
+
+                    break;
+                }
+            }
             else if (expression->type == LNGRD_EXPRESSION_TYPE_GROUP)
             {
                 lngrd_GroupForm *form;
 
                 form = (lngrd_GroupForm *) expression->form;
-                push_stash_item(flows, create_flow(form->expressions, 0, 0, 0));
+                push_stash_item(flows, create_flow(form->expressions, 0, 0, 0, flow->checkpoint));
                 flow->index += 1;
                 flow->phase = 0;
                 sustain = 1;
@@ -1633,7 +1751,7 @@ static void read_identifiable_token(lngrd_Lexer *lexer)
 
 static void read_keyword_token(lngrd_Lexer *lexer)
 {
-    static const char *keywords[] = {"if", "while", "catch", "throw", NULL};
+    static const char *keywords[] = {"if", "while", "catch", "throw", "argument", NULL};
     const char **keyword;
 
     lexer->token.type = LNGRD_TOKEN_TYPE_KEYWORD;
@@ -3795,6 +3913,20 @@ static void burn_expression(lngrd_Expression *expression, lngrd_List *pyre)
             break;
         }
 
+        case LNGRD_EXPRESSION_TYPE_ARGUMENT:
+        {
+            lngrd_ArgumentForm *form;
+
+            form = (lngrd_ArgumentForm *) expression->form;
+
+            if (form->index)
+            {
+                push_list_item(pyre, form->index);
+            }
+
+            break;
+        }
+
         case LNGRD_EXPRESSION_TYPE_GROUP:
         {
             lngrd_GroupForm *form;
@@ -3869,7 +4001,7 @@ static void destroy_stash(lngrd_Stash *stash)
     free(stash);
 }
 
-static lngrd_Flow *create_flow(lngrd_List *expressions, size_t index, lngrd_SInt ownership, lngrd_UInt phase)
+static lngrd_Flow *create_flow(lngrd_List *expressions, size_t index, lngrd_SInt ownership, lngrd_UInt phase, lngrd_UInt checkpoint)
 {
     lngrd_Flow *flow;
 
@@ -3878,6 +4010,7 @@ static lngrd_Flow *create_flow(lngrd_List *expressions, size_t index, lngrd_SInt
     flow->index = index;
     flow->ownership = ownership;
     flow->phase = phase;
+    flow->checkpoint = checkpoint;
 
     return flow;
 }
