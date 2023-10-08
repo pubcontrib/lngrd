@@ -282,7 +282,7 @@ typedef struct
 /*native expression form*/
 typedef struct
 {
-    void (*work)(lngrd_Executer *, lngrd_List *, lngrd_Stash *);
+    void (*work)(lngrd_Executer *, lngrd_List *, lngrd_SInt);
 } lngrd_NativeForm;
 
 /*expression execution iterator*/
@@ -338,29 +338,29 @@ static int is_shorthand_symbol(char symbol);
 static int is_keyword_symbol(char symbol);
 static int parse_identifier(const lngrd_String *string, lngrd_String **result);
 static int unescape_string(const lngrd_String *string, lngrd_String **result);
-static void do_add_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
-static void do_subtract_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
-static void do_multiply_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
-static void do_divide_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
-static void do_modulo_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
-static void do_increment_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
-static void do_decrement_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
-static void do_and_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
-static void do_or_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
-static void do_not_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
-static void do_precedes_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
-static void do_succeeds_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
-static void do_equals_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
-static void do_length_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
-static void do_slice_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
-static void do_merge_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
-static void do_read_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
-static void do_write_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
-static void do_delete_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
-static void do_query_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
-static void do_exit_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
-static void do_type_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities);
-static void set_global_function(const char *name, void (*work)(lngrd_Executer *, lngrd_List *, lngrd_Stash *), lngrd_Executer *executer);
+static void do_add_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
+static void do_subtract_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
+static void do_multiply_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
+static void do_divide_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
+static void do_modulo_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
+static void do_increment_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
+static void do_decrement_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
+static void do_and_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
+static void do_or_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
+static void do_not_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
+static void do_precedes_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
+static void do_succeeds_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
+static void do_equals_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
+static void do_length_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
+static void do_slice_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
+static void do_merge_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
+static void do_read_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
+static void do_write_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
+static void do_delete_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
+static void do_query_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
+static void do_exit_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
+static void do_type_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
+static void set_global_function(const char *name, void (*work)(lngrd_Executer *, lngrd_List *, lngrd_SInt), lngrd_Executer *executer);
 static void set_executer_error(const char *message, lngrd_Executer *executer);
 static void set_executor_result(lngrd_Block *result, lngrd_Executer *executer);
 static lngrd_Block *create_block(lngrd_BlockType type, void *data, size_t references);
@@ -1540,9 +1540,11 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
             else if (expression->type == LNGRD_EXPRESSION_TYPE_NATIVE)
             {
                 lngrd_NativeForm *form;
+                lngrd_SInt *capacity;
 
                 form = (lngrd_NativeForm *) expression->form;
-                form->work(executer, arguments, capacities);
+                capacity = peek_stash_item(capacities);
+                form->work(executer, arguments, *capacity);
 
                 break;
             }
@@ -2093,21 +2095,18 @@ static int unescape_string(const lngrd_String *string, lngrd_String **result)
     return 1;
 }
 
-static void do_add_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities)
+static void do_add_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
 {
-    lngrd_SInt *capacity;
     lngrd_Block *left, *right;
     lngrd_Number *l, *r;
 
-    capacity = (lngrd_SInt *) peek_stash_item(capacities);
-
-    if (*capacity < 3)
+    if (capacity < 3)
     {
         set_executer_error("absent argument", executer);
         return;
     }
 
-    left = arguments->items[arguments->length - *capacity + 1];
+    left = arguments->items[arguments->length - capacity + 1];
 
     if (left->type != LNGRD_BLOCK_TYPE_NUMBER)
     {
@@ -2115,7 +2114,7 @@ static void do_add_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_S
         return;
     }
 
-    right = arguments->items[arguments->length - *capacity + 2];
+    right = arguments->items[arguments->length - capacity + 2];
 
     if (right->type != LNGRD_BLOCK_TYPE_NUMBER)
     {
@@ -2136,21 +2135,18 @@ static void do_add_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_S
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, l->value + r->value), 0), executer);
 }
 
-static void do_subtract_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities)
+static void do_subtract_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
 {
-    lngrd_SInt *capacity;
     lngrd_Block *left, *right;
     lngrd_Number *l, *r;
 
-    capacity = (lngrd_SInt *) peek_stash_item(capacities);
-
-    if (*capacity < 3)
+    if (capacity < 3)
     {
         set_executer_error("absent argument", executer);
         return;
     }
 
-    left = arguments->items[arguments->length - *capacity + 1];
+    left = arguments->items[arguments->length - capacity + 1];
 
     if (left->type != LNGRD_BLOCK_TYPE_NUMBER)
     {
@@ -2158,7 +2154,7 @@ static void do_subtract_work(lngrd_Executer *executer, lngrd_List *arguments, ln
         return;
     }
 
-    right = arguments->items[arguments->length - *capacity + 2];
+    right = arguments->items[arguments->length - capacity + 2];
 
     if (right->type != LNGRD_BLOCK_TYPE_NUMBER)
     {
@@ -2179,21 +2175,18 @@ static void do_subtract_work(lngrd_Executer *executer, lngrd_List *arguments, ln
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, l->value - r->value), 0), executer);
 }
 
-static void do_multiply_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities)
+static void do_multiply_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
 {
-    lngrd_SInt *capacity;
     lngrd_Block *left, *right;
     lngrd_Number *l, *r;
 
-    capacity = (lngrd_SInt *) peek_stash_item(capacities);
-
-    if (*capacity < 3)
+    if (capacity < 3)
     {
         set_executer_error("absent argument", executer);
         return;
     }
 
-    left = arguments->items[arguments->length - *capacity + 1];
+    left = arguments->items[arguments->length - capacity + 1];
 
     if (left->type != LNGRD_BLOCK_TYPE_NUMBER)
     {
@@ -2201,7 +2194,7 @@ static void do_multiply_work(lngrd_Executer *executer, lngrd_List *arguments, ln
         return;
     }
 
-    right = arguments->items[arguments->length - *capacity + 2];
+    right = arguments->items[arguments->length - capacity + 2];
 
     if (right->type != LNGRD_BLOCK_TYPE_NUMBER)
     {
@@ -2224,21 +2217,18 @@ static void do_multiply_work(lngrd_Executer *executer, lngrd_List *arguments, ln
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, l->value * r->value), 0), executer);
 }
 
-static void do_divide_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities)
+static void do_divide_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
 {
-    lngrd_SInt *capacity;
     lngrd_Block *left, *right;
     lngrd_Number *l, *r;
 
-    capacity = (lngrd_SInt *) peek_stash_item(capacities);
-
-    if (*capacity < 3)
+    if (capacity < 3)
     {
         set_executer_error("absent argument", executer);
         return;
     }
 
-    left = arguments->items[arguments->length - *capacity + 1];
+    left = arguments->items[arguments->length - capacity + 1];
 
     if (left->type != LNGRD_BLOCK_TYPE_NUMBER)
     {
@@ -2246,7 +2236,7 @@ static void do_divide_work(lngrd_Executer *executer, lngrd_List *arguments, lngr
         return;
     }
 
-    right = arguments->items[arguments->length - *capacity + 2];
+    right = arguments->items[arguments->length - capacity + 2];
 
     if (right->type != LNGRD_BLOCK_TYPE_NUMBER)
     {
@@ -2266,21 +2256,18 @@ static void do_divide_work(lngrd_Executer *executer, lngrd_List *arguments, lngr
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, l->value / r->value), 0), executer);
 }
 
-static void do_modulo_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities)
+static void do_modulo_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
 {
-    lngrd_SInt *capacity;
     lngrd_Block *left, *right;
     lngrd_Number *l, *r;
 
-    capacity = (lngrd_SInt *) peek_stash_item(capacities);
-
-    if (*capacity < 3)
+    if (capacity < 3)
     {
         set_executer_error("absent argument", executer);
         return;
     }
 
-    left = arguments->items[arguments->length - *capacity + 1];
+    left = arguments->items[arguments->length - capacity + 1];
 
     if (left->type != LNGRD_BLOCK_TYPE_NUMBER)
     {
@@ -2288,7 +2275,7 @@ static void do_modulo_work(lngrd_Executer *executer, lngrd_List *arguments, lngr
         return;
     }
 
-    right = arguments->items[arguments->length - *capacity + 2];
+    right = arguments->items[arguments->length - capacity + 2];
 
     if (right->type != LNGRD_BLOCK_TYPE_NUMBER)
     {
@@ -2308,21 +2295,18 @@ static void do_modulo_work(lngrd_Executer *executer, lngrd_List *arguments, lngr
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, l->value % r->value), 0), executer);
 }
 
-static void do_increment_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities)
+static void do_increment_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
 {
-    lngrd_SInt *capacity;
     lngrd_Block *value;
     lngrd_Number *v;
 
-    capacity = (lngrd_SInt *) peek_stash_item(capacities);
-
-    if (*capacity < 2)
+    if (capacity < 2)
     {
         set_executer_error("absent argument", executer);
         return;
     }
 
-    value = arguments->items[arguments->length - *capacity + 1];
+    value = arguments->items[arguments->length - capacity + 1];
 
     if (value->type != LNGRD_BLOCK_TYPE_NUMBER)
     {
@@ -2341,21 +2325,18 @@ static void do_increment_work(lngrd_Executer *executer, lngrd_List *arguments, l
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, v->value + 1), 0), executer);
 }
 
-static void do_decrement_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities)
+static void do_decrement_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
 {
-    lngrd_SInt *capacity;
     lngrd_Block *value;
     lngrd_Number *v;
 
-    capacity = (lngrd_SInt *) peek_stash_item(capacities);
-
-    if (*capacity < 2)
+    if (capacity < 2)
     {
         set_executer_error("absent argument", executer);
         return;
     }
 
-    value = arguments->items[arguments->length - *capacity + 1];
+    value = arguments->items[arguments->length - capacity + 1];
 
     if (value->type != LNGRD_BLOCK_TYPE_NUMBER)
     {
@@ -2374,76 +2355,64 @@ static void do_decrement_work(lngrd_Executer *executer, lngrd_List *arguments, l
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, v->value - 1), 0), executer);
 }
 
-static void do_and_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities)
+static void do_and_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
 {
-    lngrd_SInt *capacity;
     lngrd_Block *left, *right;
 
-    capacity = (lngrd_SInt *) peek_stash_item(capacities);
-
-    if (*capacity < 3)
+    if (capacity < 3)
     {
         set_executer_error("absent argument", executer);
         return;
     }
 
-    left = arguments->items[arguments->length - *capacity + 1];
-    right = arguments->items[arguments->length - *capacity + 2];
+    left = arguments->items[arguments->length - capacity + 1];
+    right = arguments->items[arguments->length - capacity + 2];
 
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, is_block_truthy(left) && is_block_truthy(right)), 0), executer);
 }
 
-static void do_or_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities)
+static void do_or_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
 {
-    lngrd_SInt *capacity;
     lngrd_Block *left, *right;
 
-    capacity = (lngrd_SInt *) peek_stash_item(capacities);
-
-    if (*capacity < 3)
+    if (capacity < 3)
     {
         set_executer_error("absent argument", executer);
         return;
     }
 
-    left = arguments->items[arguments->length - *capacity + 1];
-    right = arguments->items[arguments->length - *capacity + 2];
+    left = arguments->items[arguments->length - capacity + 1];
+    right = arguments->items[arguments->length - capacity + 2];
 
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, is_block_truthy(left) || is_block_truthy(right)), 0), executer);
 }
 
-static void do_not_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities)
+static void do_not_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
 {
-    lngrd_SInt *capacity;
     lngrd_Block *value;
 
-    capacity = (lngrd_SInt *) peek_stash_item(capacities);
-
-    if (*capacity < 2)
+    if (capacity < 2)
     {
         set_executer_error("absent argument", executer);
         return;
     }
 
-    value = arguments->items[arguments->length - *capacity + 1];
+    value = arguments->items[arguments->length - capacity + 1];
 
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, !is_block_truthy(value)), 0), executer);
 }
 
-static void do_precedes_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities)
+static void do_precedes_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
 {
-    lngrd_SInt *capacity;
     lngrd_Block *left, *right;
 
-    capacity = (lngrd_SInt *) peek_stash_item(capacities);
-
-    if (*capacity < 3)
+    if (capacity < 3)
     {
         set_executer_error("absent argument", executer);
         return;
     }
 
-    left = arguments->items[arguments->length - *capacity + 1];
+    left = arguments->items[arguments->length - capacity + 1];
 
     if (left->type == LNGRD_BLOCK_TYPE_FUNCTION)
     {
@@ -2451,7 +2420,7 @@ static void do_precedes_work(lngrd_Executer *executer, lngrd_List *arguments, ln
         return;
     }
 
-    right = arguments->items[arguments->length - *capacity + 2];
+    right = arguments->items[arguments->length - capacity + 2];
 
     if (right->type == LNGRD_BLOCK_TYPE_FUNCTION)
     {
@@ -2462,20 +2431,17 @@ static void do_precedes_work(lngrd_Executer *executer, lngrd_List *arguments, ln
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, compare_blocks(left, right) < 0), 0), executer);
 }
 
-static void do_succeeds_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities)
+static void do_succeeds_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
 {
-    lngrd_SInt *capacity;
     lngrd_Block *left, *right;
 
-    capacity = (lngrd_SInt *) peek_stash_item(capacities);
-
-    if (*capacity < 3)
+    if (capacity < 3)
     {
         set_executer_error("absent argument", executer);
         return;
     }
 
-    left = arguments->items[arguments->length - *capacity + 1];
+    left = arguments->items[arguments->length - capacity + 1];
 
     if (left->type == LNGRD_BLOCK_TYPE_FUNCTION)
     {
@@ -2483,7 +2449,7 @@ static void do_succeeds_work(lngrd_Executer *executer, lngrd_List *arguments, ln
         return;
     }
 
-    right = arguments->items[arguments->length - *capacity + 2];
+    right = arguments->items[arguments->length - capacity + 2];
 
     if (right->type == LNGRD_BLOCK_TYPE_FUNCTION)
     {
@@ -2494,20 +2460,17 @@ static void do_succeeds_work(lngrd_Executer *executer, lngrd_List *arguments, ln
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, compare_blocks(left, right) > 0), 0), executer);
 }
 
-static void do_equals_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities)
+static void do_equals_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
 {
-    lngrd_SInt *capacity;
     lngrd_Block *left, *right;
 
-    capacity = (lngrd_SInt *) peek_stash_item(capacities);
-
-    if (*capacity < 3)
+    if (capacity < 3)
     {
         set_executer_error("absent argument", executer);
         return;
     }
 
-    left = arguments->items[arguments->length - *capacity + 1];
+    left = arguments->items[arguments->length - capacity + 1];
 
     if (left->type == LNGRD_BLOCK_TYPE_FUNCTION)
     {
@@ -2515,7 +2478,7 @@ static void do_equals_work(lngrd_Executer *executer, lngrd_List *arguments, lngr
         return;
     }
 
-    right = arguments->items[arguments->length - *capacity + 2];
+    right = arguments->items[arguments->length - capacity + 2];
 
     if (right->type == LNGRD_BLOCK_TYPE_FUNCTION)
     {
@@ -2526,21 +2489,18 @@ static void do_equals_work(lngrd_Executer *executer, lngrd_List *arguments, lngr
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, compare_blocks(left, right) == 0), 0), executer);
 }
 
-static void do_length_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities)
+static void do_length_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
 {
-    lngrd_SInt *capacity;
     lngrd_Block *value;
     size_t length;
 
-    capacity = (lngrd_SInt *) peek_stash_item(capacities);
-
-    if (*capacity < 2)
+    if (capacity < 2)
     {
         set_executer_error("absent argument", executer);
         return;
     }
 
-    value = arguments->items[arguments->length - *capacity + 1];
+    value = arguments->items[arguments->length - capacity + 1];
 
     if (value->type != LNGRD_BLOCK_TYPE_STRING)
     {
@@ -2561,9 +2521,8 @@ static void do_length_work(lngrd_Executer *executer, lngrd_List *arguments, lngr
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, (lngrd_SInt) length), 0), executer);
 }
 
-static void do_slice_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities)
+static void do_slice_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
 {
-    lngrd_SInt *capacity;
     lngrd_Block *value, *start, *end;
     lngrd_String *v;
     lngrd_Number *s, *e;
@@ -2571,15 +2530,13 @@ static void do_slice_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd
     char *bytes;
     size_t length;
 
-    capacity = (lngrd_SInt *) peek_stash_item(capacities);
-
-    if (*capacity < 4)
+    if (capacity < 4)
     {
         set_executer_error("absent argument", executer);
         return;
     }
 
-    value = arguments->items[arguments->length - *capacity + 1];
+    value = arguments->items[arguments->length - capacity + 1];
 
     if (value->type != LNGRD_BLOCK_TYPE_STRING)
     {
@@ -2587,7 +2544,7 @@ static void do_slice_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd
         return;
     }
 
-    start = arguments->items[arguments->length - *capacity + 2];
+    start = arguments->items[arguments->length - capacity + 2];
 
     if (start->type != LNGRD_BLOCK_TYPE_NUMBER)
     {
@@ -2595,7 +2552,7 @@ static void do_slice_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd
         return;
     }
 
-    end = arguments->items[arguments->length - *capacity + 3];
+    end = arguments->items[arguments->length - capacity + 3];
 
     if (end->type != LNGRD_BLOCK_TYPE_NUMBER)
     {
@@ -2645,23 +2602,20 @@ static void do_slice_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, create_string(bytes, length), 0), executer);
 }
 
-static void do_merge_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities)
+static void do_merge_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
 {
-    lngrd_SInt *capacity;
     lngrd_Block *left, *right;
     lngrd_String *l, *r;
     char *bytes;
     size_t length;
 
-    capacity = (lngrd_SInt *) peek_stash_item(capacities);
-
-    if (*capacity < 3)
+    if (capacity < 3)
     {
         set_executer_error("absent argument", executer);
         return;
     }
 
-    left = arguments->items[arguments->length - *capacity + 1];
+    left = arguments->items[arguments->length - capacity + 1];
 
     if (left->type != LNGRD_BLOCK_TYPE_STRING)
     {
@@ -2669,7 +2623,7 @@ static void do_merge_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd
         return;
     }
 
-    right = arguments->items[arguments->length - *capacity + 2];
+    right = arguments->items[arguments->length - capacity + 2];
 
     if (right->type != LNGRD_BLOCK_TYPE_STRING)
     {
@@ -2716,9 +2670,8 @@ static void do_merge_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, create_string(bytes, length), 0), executer);
 }
 
-static void do_read_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities)
+static void do_read_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
 {
-    lngrd_SInt *capacity;
     lngrd_Block *file, *until;
     lngrd_String *u;
     FILE *handle;
@@ -2727,15 +2680,13 @@ static void do_read_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_
     char *buffer;
     size_t fill, length;
 
-    capacity = (lngrd_SInt *) peek_stash_item(capacities);
-
-    if (*capacity < 3)
+    if (capacity < 3)
     {
         set_executer_error("absent argument", executer);
         return;
     }
 
-    file = arguments->items[arguments->length - *capacity + 1];
+    file = arguments->items[arguments->length - capacity + 1];
 
     if (file->type != LNGRD_BLOCK_TYPE_NUMBER && file->type != LNGRD_BLOCK_TYPE_STRING)
     {
@@ -2743,7 +2694,7 @@ static void do_read_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_
         return;
     }
 
-    until = arguments->items[arguments->length - *capacity + 2];
+    until = arguments->items[arguments->length - capacity + 2];
 
     if (until->type != LNGRD_BLOCK_TYPE_STRING)
     {
@@ -2873,23 +2824,20 @@ static void do_read_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, create_string(buffer, fill), 0), executer);
 }
 
-static void do_write_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities)
+static void do_write_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
 {
-    lngrd_SInt *capacity;
     lngrd_Block *file, *text;
     lngrd_String *t;
     FILE *handle;
     int closable;
 
-    capacity = (lngrd_SInt *) peek_stash_item(capacities);
-
-    if (*capacity < 3)
+    if (capacity < 3)
     {
         set_executer_error("absent argument", executer);
         return;
     }
 
-    file = arguments->items[arguments->length - *capacity + 1];
+    file = arguments->items[arguments->length - capacity + 1];
 
     if (file->type != LNGRD_BLOCK_TYPE_NUMBER && file->type != LNGRD_BLOCK_TYPE_STRING)
     {
@@ -2897,7 +2845,7 @@ static void do_write_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd
         return;
     }
 
-    text = arguments->items[arguments->length - *capacity + 2];
+    text = arguments->items[arguments->length - capacity + 2];
 
     if (text->type != LNGRD_BLOCK_TYPE_STRING)
     {
@@ -2979,22 +2927,19 @@ static void do_write_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, cstring_to_string(""), 0), executer);
 }
 
-static void do_delete_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities)
+static void do_delete_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
 {
-    lngrd_SInt *capacity;
     lngrd_Block *file;
     char *cstring;
     int status;
 
-    capacity = (lngrd_SInt *) peek_stash_item(capacities);
-
-    if (*capacity < 2)
+    if (capacity < 2)
     {
         set_executer_error("absent argument", executer);
         return;
     }
 
-    file = arguments->items[arguments->length - *capacity + 1];
+    file = arguments->items[arguments->length - capacity + 1];
 
     if (file->type != LNGRD_BLOCK_TYPE_NUMBER && file->type != LNGRD_BLOCK_TYPE_STRING)
     {
@@ -3031,22 +2976,19 @@ static void do_delete_work(lngrd_Executer *executer, lngrd_List *arguments, lngr
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, cstring_to_string(""), 0), executer);
 }
 
-static void do_query_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities)
+static void do_query_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
 {
-    lngrd_SInt *capacity;
     lngrd_Block *variable;
     lngrd_String *v;
     char *cstring, *text;
 
-    capacity = (lngrd_SInt *) peek_stash_item(capacities);
-
-    if (*capacity < 2)
+    if (capacity < 2)
     {
         set_executer_error("absent argument", executer);
         return;
     }
 
-    variable = arguments->items[arguments->length - *capacity + 1];
+    variable = arguments->items[arguments->length - capacity + 1];
 
     if (variable->type != LNGRD_BLOCK_TYPE_STRING)
     {
@@ -3069,21 +3011,18 @@ static void do_query_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, cstring_to_string(text), 0), executer);
 }
 
-static void do_exit_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities)
+static void do_exit_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
 {
-    lngrd_SInt *capacity;
     lngrd_Block *code;
     lngrd_Number *c;
 
-    capacity = (lngrd_SInt *) peek_stash_item(capacities);
-
-    if (*capacity < 2)
+    if (capacity < 2)
     {
         set_executer_error("absent argument", executer);
         return;
     }
 
-    code = arguments->items[arguments->length - *capacity + 1];
+    code = arguments->items[arguments->length - capacity + 1];
 
     if (code->type != LNGRD_BLOCK_TYPE_NUMBER)
     {
@@ -3110,21 +3049,18 @@ static void do_exit_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, cstring_to_string(""), 0), executer);
 }
 
-static void do_type_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_Stash *capacities)
+static void do_type_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
 {
-    lngrd_SInt *capacity;
     lngrd_Block *value;
     char *type;
 
-    capacity = (lngrd_SInt *) peek_stash_item(capacities);
-
-    if (*capacity < 2)
+    if (capacity < 2)
     {
         set_executer_error("absent argument", executer);
         return;
     }
 
-    value = arguments->items[arguments->length - *capacity + 1];
+    value = arguments->items[arguments->length - capacity + 1];
 
     switch (value->type)
     {
@@ -3156,7 +3092,7 @@ static void do_type_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, cstring_to_string(type), 0), executer);
 }
 
-static void set_global_function(const char *name, void (*work)(lngrd_Executer *, lngrd_List *, lngrd_Stash *), lngrd_Executer *executer)
+static void set_global_function(const char *name, void (*work)(lngrd_Executer *, lngrd_List *, lngrd_SInt), lngrd_Executer *executer)
 {
     lngrd_Expression *expression;
     lngrd_NativeForm *form;
