@@ -282,7 +282,7 @@ typedef struct
 /*native expression form*/
 typedef struct
 {
-    void (*work)(lngrd_Executer *, lngrd_List *, lngrd_SInt);
+    void (*work)(lngrd_Executer *, lngrd_List *, lngrd_UInt);
 } lngrd_NativeForm;
 
 /*expression execution iterator*/
@@ -338,29 +338,29 @@ static int is_shorthand_symbol(char symbol);
 static int is_keyword_symbol(char symbol);
 static int parse_identifier(const lngrd_String *string, lngrd_String **result);
 static int unescape_string(const lngrd_String *string, lngrd_String **result);
-static void do_add_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
-static void do_subtract_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
-static void do_multiply_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
-static void do_divide_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
-static void do_modulo_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
-static void do_increment_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
-static void do_decrement_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
-static void do_and_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
-static void do_or_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
-static void do_not_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
-static void do_precedes_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
-static void do_succeeds_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
-static void do_equals_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
-static void do_length_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
-static void do_slice_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
-static void do_merge_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
-static void do_read_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
-static void do_write_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
-static void do_delete_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
-static void do_query_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
-static void do_exit_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
-static void do_type_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity);
-static void set_global_function(const char *name, void (*work)(lngrd_Executer *, lngrd_List *, lngrd_SInt), lngrd_Executer *executer);
+static void do_add_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity);
+static void do_subtract_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity);
+static void do_multiply_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity);
+static void do_divide_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity);
+static void do_modulo_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity);
+static void do_increment_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity);
+static void do_decrement_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity);
+static void do_and_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity);
+static void do_or_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity);
+static void do_not_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity);
+static void do_precedes_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity);
+static void do_succeeds_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity);
+static void do_equals_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity);
+static void do_length_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity);
+static void do_slice_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity);
+static void do_merge_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity);
+static void do_read_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity);
+static void do_write_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity);
+static void do_delete_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity);
+static void do_query_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity);
+static void do_exit_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity);
+static void do_type_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity);
+static void set_global_function(const char *name, void (*work)(lngrd_Executer *, lngrd_List *, lngrd_UInt), lngrd_Executer *executer);
 static void set_executer_error(const char *message, lngrd_Executer *executer);
 static void set_executor_result(lngrd_Block *result, lngrd_Executer *executer);
 static lngrd_Block *create_block(lngrd_BlockType type, void *data, size_t references);
@@ -1265,7 +1265,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
                 {
                     lngrd_Block *function;
                     lngrd_List *expressions;
-                    lngrd_SInt *capacity;
+                    lngrd_UInt *capacity;
                     lngrd_UInt checkpoint;
 
                     push_list_item(arguments, executer->result);
@@ -1307,7 +1307,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
                         }
                     }
 
-                    capacity = (lngrd_SInt *) allocate(1, sizeof(lngrd_SInt));
+                    capacity = (lngrd_UInt *) allocate(1, sizeof(lngrd_UInt));
                     capacity[0] = flow->phase;
                     push_stash_item(capacities, capacity);
                     push_list_item(locals, NULL);
@@ -1499,9 +1499,9 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
                     if (executer->capacities->length > 0)
                     {
-                        lngrd_SInt *capacity;
+                        lngrd_UInt *capacity;
 
-                        capacity = (lngrd_SInt *) peek_stash_item(executer->capacities);
+                        capacity = (lngrd_UInt *) peek_stash_item(executer->capacities);
                         limit = *capacity - 1;
                     }
                     else
@@ -1540,7 +1540,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
             else if (expression->type == LNGRD_EXPRESSION_TYPE_NATIVE)
             {
                 lngrd_NativeForm *form;
-                lngrd_SInt *capacity;
+                lngrd_UInt *capacity;
 
                 form = (lngrd_NativeForm *) expression->form;
                 capacity = peek_stash_item(capacities);
@@ -2095,7 +2095,7 @@ static int unescape_string(const lngrd_String *string, lngrd_String **result)
     return 1;
 }
 
-static void do_add_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
+static void do_add_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity)
 {
     lngrd_Block *left, *right;
     lngrd_Number *l, *r;
@@ -2135,7 +2135,7 @@ static void do_add_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_S
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, l->value + r->value), 0), executer);
 }
 
-static void do_subtract_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
+static void do_subtract_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity)
 {
     lngrd_Block *left, *right;
     lngrd_Number *l, *r;
@@ -2175,7 +2175,7 @@ static void do_subtract_work(lngrd_Executer *executer, lngrd_List *arguments, ln
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, l->value - r->value), 0), executer);
 }
 
-static void do_multiply_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
+static void do_multiply_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity)
 {
     lngrd_Block *left, *right;
     lngrd_Number *l, *r;
@@ -2217,7 +2217,7 @@ static void do_multiply_work(lngrd_Executer *executer, lngrd_List *arguments, ln
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, l->value * r->value), 0), executer);
 }
 
-static void do_divide_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
+static void do_divide_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity)
 {
     lngrd_Block *left, *right;
     lngrd_Number *l, *r;
@@ -2256,7 +2256,7 @@ static void do_divide_work(lngrd_Executer *executer, lngrd_List *arguments, lngr
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, l->value / r->value), 0), executer);
 }
 
-static void do_modulo_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
+static void do_modulo_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity)
 {
     lngrd_Block *left, *right;
     lngrd_Number *l, *r;
@@ -2295,7 +2295,7 @@ static void do_modulo_work(lngrd_Executer *executer, lngrd_List *arguments, lngr
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, l->value % r->value), 0), executer);
 }
 
-static void do_increment_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
+static void do_increment_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity)
 {
     lngrd_Block *value;
     lngrd_Number *v;
@@ -2325,7 +2325,7 @@ static void do_increment_work(lngrd_Executer *executer, lngrd_List *arguments, l
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, v->value + 1), 0), executer);
 }
 
-static void do_decrement_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
+static void do_decrement_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity)
 {
     lngrd_Block *value;
     lngrd_Number *v;
@@ -2355,7 +2355,7 @@ static void do_decrement_work(lngrd_Executer *executer, lngrd_List *arguments, l
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, v->value - 1), 0), executer);
 }
 
-static void do_and_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
+static void do_and_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity)
 {
     lngrd_Block *left, *right;
 
@@ -2371,7 +2371,7 @@ static void do_and_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_S
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, is_block_truthy(left) && is_block_truthy(right)), 0), executer);
 }
 
-static void do_or_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
+static void do_or_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity)
 {
     lngrd_Block *left, *right;
 
@@ -2387,7 +2387,7 @@ static void do_or_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SI
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, is_block_truthy(left) || is_block_truthy(right)), 0), executer);
 }
 
-static void do_not_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
+static void do_not_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity)
 {
     lngrd_Block *value;
 
@@ -2402,7 +2402,7 @@ static void do_not_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_S
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, !is_block_truthy(value)), 0), executer);
 }
 
-static void do_precedes_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
+static void do_precedes_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity)
 {
     lngrd_Block *left, *right;
 
@@ -2431,7 +2431,7 @@ static void do_precedes_work(lngrd_Executer *executer, lngrd_List *arguments, ln
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, compare_blocks(left, right) < 0), 0), executer);
 }
 
-static void do_succeeds_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
+static void do_succeeds_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity)
 {
     lngrd_Block *left, *right;
 
@@ -2460,7 +2460,7 @@ static void do_succeeds_work(lngrd_Executer *executer, lngrd_List *arguments, ln
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, compare_blocks(left, right) > 0), 0), executer);
 }
 
-static void do_equals_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
+static void do_equals_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity)
 {
     lngrd_Block *left, *right;
 
@@ -2489,7 +2489,7 @@ static void do_equals_work(lngrd_Executer *executer, lngrd_List *arguments, lngr
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, compare_blocks(left, right) == 0), 0), executer);
 }
 
-static void do_length_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
+static void do_length_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity)
 {
     lngrd_Block *value;
     size_t length;
@@ -2521,7 +2521,7 @@ static void do_length_work(lngrd_Executer *executer, lngrd_List *arguments, lngr
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, (lngrd_SInt) length), 0), executer);
 }
 
-static void do_slice_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
+static void do_slice_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity)
 {
     lngrd_Block *value, *start, *end;
     lngrd_String *v;
@@ -2602,7 +2602,7 @@ static void do_slice_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, create_string(bytes, length), 0), executer);
 }
 
-static void do_merge_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
+static void do_merge_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity)
 {
     lngrd_Block *left, *right;
     lngrd_String *l, *r;
@@ -2670,7 +2670,7 @@ static void do_merge_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, create_string(bytes, length), 0), executer);
 }
 
-static void do_read_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
+static void do_read_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity)
 {
     lngrd_Block *file, *until;
     lngrd_String *u;
@@ -2824,7 +2824,7 @@ static void do_read_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, create_string(buffer, fill), 0), executer);
 }
 
-static void do_write_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
+static void do_write_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity)
 {
     lngrd_Block *file, *text;
     lngrd_String *t;
@@ -2927,7 +2927,7 @@ static void do_write_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, cstring_to_string(""), 0), executer);
 }
 
-static void do_delete_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
+static void do_delete_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity)
 {
     lngrd_Block *file;
     char *cstring;
@@ -2976,7 +2976,7 @@ static void do_delete_work(lngrd_Executer *executer, lngrd_List *arguments, lngr
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, cstring_to_string(""), 0), executer);
 }
 
-static void do_query_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
+static void do_query_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity)
 {
     lngrd_Block *variable;
     lngrd_String *v;
@@ -3011,7 +3011,7 @@ static void do_query_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, cstring_to_string(text), 0), executer);
 }
 
-static void do_exit_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
+static void do_exit_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity)
 {
     lngrd_Block *code;
     lngrd_Number *c;
@@ -3049,7 +3049,7 @@ static void do_exit_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, cstring_to_string(""), 0), executer);
 }
 
-static void do_type_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_SInt capacity)
+static void do_type_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity)
 {
     lngrd_Block *value;
     char *type;
@@ -3092,7 +3092,7 @@ static void do_type_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, cstring_to_string(type), 0), executer);
 }
 
-static void set_global_function(const char *name, void (*work)(lngrd_Executer *, lngrd_List *, lngrd_SInt), lngrd_Executer *executer)
+static void set_global_function(const char *name, void (*work)(lngrd_Executer *, lngrd_List *, lngrd_UInt), lngrd_Executer *executer)
 {
     lngrd_Expression *expression;
     lngrd_NativeForm *form;
