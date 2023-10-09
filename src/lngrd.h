@@ -104,7 +104,7 @@ typedef struct
 {
     lngrd_Block *key;
     lngrd_Block *value;
-    lngrd_UInt phase; /*0,unclaimed 1,occupied 2,vacant*/
+    lngrd_UInt phase; /*(enum) 0,unclaimed 1,occupied 2,vacant*/
 } lngrd_Pair;
 
 /*block associated array*/
