@@ -188,12 +188,12 @@ typedef struct
     lngrd_UInt phase;
     lngrd_UInt checkpoint;
     lngrd_UInt capacity;
-} lngrd_Flow;
+} lngrd_Action;
 
-/*flow dynamic array*/
+/*action dynamic array*/
 typedef struct
 {
-    lngrd_Flow **flows;
+    lngrd_Action **actions;
     size_t length;
     size_t capacity;
 } lngrd_Plan;
@@ -394,12 +394,12 @@ static void burn_map(lngrd_Map *map, lngrd_List *pyre);
 static lngrd_Expression *create_expression(lngrd_ExpressionType type, void *form);
 static void burn_expression(lngrd_Expression *expression, lngrd_List *pyre);
 static lngrd_Plan *create_plan(void);
-static void push_plan_flow(lngrd_Plan *plan, lngrd_Flow *flow);
-static lngrd_Flow *pop_plan_flow(lngrd_Plan *plan);
-static lngrd_Flow *peek_plan_flow(lngrd_Plan *plan);
+static void push_plan_action(lngrd_Plan *plan, lngrd_Action *action);
+static lngrd_Action *pop_plan_action(lngrd_Plan *plan);
+static lngrd_Action *peek_plan_action(lngrd_Plan *plan);
 static void destroy_plan(lngrd_Plan *plan);
-static lngrd_Flow *create_flow(lngrd_List *expressions, size_t index, lngrd_UInt ownership, lngrd_UInt phase, lngrd_UInt checkpoint, lngrd_UInt capacity);
-static void burn_flow(lngrd_Flow *flow, lngrd_List *pyre);
+static lngrd_Action *create_action(lngrd_List *expressions, size_t index, lngrd_UInt ownership, lngrd_UInt phase, lngrd_UInt checkpoint, lngrd_UInt capacity);
+static void burn_action(lngrd_Action *action, lngrd_List *pyre);
 static int can_fit_both(size_t left, size_t right);
 static void *allocate(size_t number, size_t size);
 static void *reallocate(void *memory, size_t number, size_t size);
@@ -1077,22 +1077,22 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
         return;
     }
 
-    push_plan_flow(plan, create_flow(expressions, 0, 0x3, 0, 0, 0));
+    push_plan_action(plan, create_action(expressions, 0, 0x3, 0, 0, 0));
 
     while (plan->length > 0)
     {
-        lngrd_Flow *flow;
+        lngrd_Action *action;
         int sustain;
 
-        flow = peek_plan_flow(plan);
-        expressions = flow->expressions;
+        action = peek_plan_action(plan);
+        expressions = action->expressions;
         sustain = 0;
 
-        for (; flow->index < expressions->length; flow->index++, flow->phase = 0)
+        for (; action->index < expressions->length; action->index++, action->phase = 0)
         {
             lngrd_Expression *expression;
 
-            expression = (lngrd_Expression *) expressions->items[flow->index]->data;
+            expression = (lngrd_Expression *) expressions->items[action->index]->data;
 
             if (executer->errored && expression->type != LNGRD_EXPRESSION_TYPE_INVOKE && expression->type != LNGRD_EXPRESSION_TYPE_CATCH)
             {
@@ -1201,22 +1201,22 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
                 form = (lngrd_InvokeForm *) expression->form;
 
-                if (flow->phase == 0 && form->arguments->length == 0)
+                if (action->phase == 0 && form->arguments->length == 0)
                 {
                     set_executer_error("absent argument", executer);
                     break;
                 }
 
-                if (executer->errored || flow->phase > form->arguments->length)
+                if (executer->errored || action->phase > form->arguments->length)
                 {
                     size_t index;
 
-                    for (index = 0; index < flow->phase - 1; index++)
+                    for (index = 0; index < action->phase - 1; index++)
                     {
                         push_list_item(pyre, pop_list_item(arguments));
                     }
 
-                    if (flow->phase > form->arguments->length)
+                    if (action->phase > form->arguments->length)
                     {
                         if (peek_list_item(locals))
                         {
@@ -1230,33 +1230,33 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
                     if (!executer->errored)
                     {
-                        flow->index += 1;
-                        flow->phase = 0;
+                        action->index += 1;
+                        action->phase = 0;
                         sustain = 1;
                     }
 
                     break;
                 }
 
-                if (flow->phase < form->arguments->length)
+                if (action->phase < form->arguments->length)
                 {
                     lngrd_List *single;
 
-                    if (flow->phase > 0)
+                    if (action->phase > 0)
                     {
                         push_list_item(arguments, executer->result);
                         executer->result = NULL;
                     }
 
                     single = create_list();
-                    push_list_item(single, form->arguments->items[flow->phase]);
-                    push_plan_flow(plan, create_flow(single, 0, 0x2, 0, flow->checkpoint, flow->capacity));
-                    flow->phase += 1;
+                    push_list_item(single, form->arguments->items[action->phase]);
+                    push_plan_action(plan, create_action(single, 0, 0x2, 0, action->checkpoint, action->capacity));
+                    action->phase += 1;
                     sustain = 1;
 
                     break;
                 }
-                else if (flow->phase == form->arguments->length)
+                else if (action->phase == form->arguments->length)
                 {
                     lngrd_Block *function;
                     lngrd_List *expressions;
@@ -1264,13 +1264,13 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
                     push_list_item(arguments, executer->result);
                     executer->result = NULL;
-                    function = arguments->items[arguments->length - flow->phase];
+                    function = arguments->items[arguments->length - action->phase];
 
                     if (function->type != LNGRD_BLOCK_TYPE_FUNCTION)
                     {
                         size_t index;
 
-                        for (index = 0; index < flow->phase; index++)
+                        for (index = 0; index < action->phase; index++)
                         {
                             push_list_item(pyre, pop_list_item(arguments));
                         }
@@ -1296,14 +1296,14 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
                             if (expression->type == LNGRD_EXPRESSION_TYPE_NATIVE)
                             {
-                                checkpoint = flow->checkpoint;
+                                checkpoint = action->checkpoint;
                             }
                         }
                     }
 
                     push_list_item(locals, NULL);
-                    push_plan_flow(plan, create_flow(expressions, 0, 0x0, 0, checkpoint, flow->phase));
-                    flow->phase += 1;
+                    push_plan_action(plan, create_action(expressions, 0, 0x0, 0, checkpoint, action->phase));
+                    action->phase += 1;
                     sustain = 1;
 
                     set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, cstring_to_string(""), 0), executer);
@@ -1317,19 +1317,19 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
                 form = (lngrd_BranchForm *) expression->form;
 
-                if (flow->phase == 0)
+                if (action->phase == 0)
                 {
                     lngrd_List *single;
 
                     single = create_list();
                     push_list_item(single, form->test);
-                    push_plan_flow(plan, create_flow(single, 0, 0x2, 0, flow->checkpoint, flow->capacity));
-                    flow->phase = 1;
+                    push_plan_action(plan, create_action(single, 0, 0x2, 0, action->checkpoint, action->capacity));
+                    action->phase = 1;
                     sustain = 1;
 
                     break;
                 }
-                else if (flow->phase == 1)
+                else if (action->phase == 1)
                 {
                     if (is_block_truthy(executer->result))
                     {
@@ -1337,8 +1337,8 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
                         single = create_list();
                         push_list_item(single, form->pass);
-                        push_plan_flow(plan, create_flow(single, 0, 0x2, 0, flow->checkpoint, flow->capacity));
-                        flow->phase = 2;
+                        push_plan_action(plan, create_action(single, 0, 0x2, 0, action->checkpoint, action->capacity));
+                        action->phase = 2;
                         sustain = 1;
 
                         break;
@@ -1355,19 +1355,19 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
                 form = (lngrd_LoopForm *) expression->form;
 
-                if (flow->phase == 0)
+                if (action->phase == 0)
                 {
                     lngrd_List *single;
 
                     single = create_list();
                     push_list_item(single, form->test);
-                    push_plan_flow(plan, create_flow(single, 0, 0x2, 0, flow->checkpoint, flow->capacity));
-                    flow->phase = 1;
+                    push_plan_action(plan, create_action(single, 0, 0x2, 0, action->checkpoint, action->capacity));
+                    action->phase = 1;
                     sustain = 1;
 
                     break;
                 }
-                else if (flow->phase == 1)
+                else if (action->phase == 1)
                 {
                     if (is_block_truthy(executer->result))
                     {
@@ -1375,21 +1375,21 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
                         single = create_list();
                         push_list_item(single, form->body);
-                        push_plan_flow(plan, create_flow(single, 0, 0x2, 0, flow->checkpoint, flow->capacity));
-                        flow->phase = 0;
+                        push_plan_action(plan, create_action(single, 0, 0x2, 0, action->checkpoint, action->capacity));
+                        action->phase = 0;
                         sustain = 1;
 
                         break;
                     }
                     else
                     {
-                        flow->phase = 2;
+                        action->phase = 2;
                         sustain = 1;
 
                         break;
                     }
                 }
-                else if (flow->phase == 2)
+                else if (action->phase == 2)
                 {
                     set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, cstring_to_string(""), 0), executer);
                 }
@@ -1400,19 +1400,19 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
                 form = (lngrd_CatchForm *) expression->form;
 
-                if (flow->phase == 0)
+                if (action->phase == 0)
                 {
                     lngrd_List *single;
 
                     single = create_list();
                     push_list_item(single, form->failable);
-                    push_plan_flow(plan, create_flow(single, 0, 0x2, 0, flow->checkpoint, flow->capacity));
-                    flow->phase = 1;
+                    push_plan_action(plan, create_action(single, 0, 0x2, 0, action->checkpoint, action->capacity));
+                    action->phase = 1;
                     sustain = 1;
 
                     break;
                 }
-                else if (flow->phase == 1)
+                else if (action->phase == 1)
                 {
                     if (executer->errored)
                     {
@@ -1430,19 +1430,19 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
                 form = (lngrd_ThrowForm *) expression->form;
 
-                if (flow->phase == 0)
+                if (action->phase == 0)
                 {
                     lngrd_List *single;
 
                     single = create_list();
                     push_list_item(single, form->error);
-                    push_plan_flow(plan, create_flow(single, 0, 0x2, 0, flow->checkpoint, flow->capacity));
-                    flow->phase = 1;
+                    push_plan_action(plan, create_action(single, 0, 0x2, 0, action->checkpoint, action->capacity));
+                    action->phase = 1;
                     sustain = 1;
 
                     break;
                 }
-                else if (flow->phase == 1)
+                else if (action->phase == 1)
                 {
                     executer->errored = 1;
                 }
@@ -1455,19 +1455,19 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
                 form = (lngrd_ArgumentForm *) expression->form;
 
-                if (flow->phase == 0)
+                if (action->phase == 0)
                 {
                     lngrd_List *single;
 
                     single = create_list();
                     push_list_item(single, form->index);
-                    push_plan_flow(plan, create_flow(single, 0, 0x2, 0, flow->checkpoint, flow->capacity));
-                    flow->phase = 1;
+                    push_plan_action(plan, create_action(single, 0, 0x2, 0, action->checkpoint, action->capacity));
+                    action->phase = 1;
                     sustain = 1;
 
                     break;
                 }
-                else if (flow->phase == 1)
+                else if (action->phase == 1)
                 {
                     lngrd_Number *index;
 
@@ -1487,15 +1487,15 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
                         break;
                     }
 
-                    if (index->value < 1 || (lngrd_UInt) index->value >= flow->capacity)
+                    if (index->value < 1 || (lngrd_UInt) index->value >= action->capacity)
                     {
                         set_executer_error("absent argument", executer);
 
                         break;
                     }
 
-                    set_executor_result(executer->arguments->items[flow->checkpoint - flow->capacity + index->value], executer);
-                    flow->phase = 2;
+                    set_executor_result(executer->arguments->items[action->checkpoint - action->capacity + index->value], executer);
+                    action->phase = 2;
                     sustain = 1;
 
                     break;
@@ -1506,9 +1506,9 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
                 lngrd_GroupForm *form;
 
                 form = (lngrd_GroupForm *) expression->form;
-                push_plan_flow(plan, create_flow(form->expressions, 0, 0x0, 0, flow->checkpoint, flow->capacity));
-                flow->index += 1;
-                flow->phase = 0;
+                push_plan_action(plan, create_action(form->expressions, 0, 0x0, 0, action->checkpoint, action->capacity));
+                action->index += 1;
+                action->phase = 0;
                 sustain = 1;
 
                 set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, cstring_to_string(""), 0), executer);
@@ -1520,7 +1520,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
                 lngrd_NativeForm *form;
 
                 form = (lngrd_NativeForm *) expression->form;
-                form->work(executer, arguments, flow->capacity);
+                form->work(executer, arguments, action->capacity);
 
                 break;
             }
@@ -1528,7 +1528,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
         if (!sustain)
         {
-            burn_flow(pop_plan_flow(plan), pyre);
+            burn_action(pop_plan_action(plan), pyre);
             burn_pyre(pyre);
         }
     }
@@ -3873,14 +3873,14 @@ static lngrd_Plan *create_plan(void)
     lngrd_Plan *plan;
 
     plan = (lngrd_Plan *) allocate(1, sizeof(lngrd_Plan));
-    plan->flows = (lngrd_Flow **) allocate(8, sizeof(lngrd_Flow *));
+    plan->actions = (lngrd_Action **) allocate(8, sizeof(lngrd_Action *));
     plan->length = 0;
     plan->capacity = 8;
 
     return plan;
 }
 
-static void push_plan_flow(lngrd_Plan *plan, lngrd_Flow *flow)
+static void push_plan_action(lngrd_Plan *plan, lngrd_Action *action)
 {
     if (plan->length == plan->capacity)
     {
@@ -3890,63 +3890,63 @@ static void push_plan_flow(lngrd_Plan *plan, lngrd_Flow *flow)
         }
 
         plan->capacity *= 2;
-        plan->flows = (lngrd_Flow **) reallocate(plan->flows, plan->capacity, sizeof(lngrd_Flow *));
+        plan->actions = (lngrd_Action **) reallocate(plan->actions, plan->capacity, sizeof(lngrd_Action *));
     }
 
-    plan->flows[plan->length++] = flow;
+    plan->actions[plan->length++] = action;
 }
 
-static lngrd_Flow *pop_plan_flow(lngrd_Plan *plan)
+static lngrd_Action *pop_plan_action(lngrd_Plan *plan)
 {
-    return plan->flows[--plan->length];
+    return plan->actions[--plan->length];
 }
 
-static lngrd_Flow *peek_plan_flow(lngrd_Plan *plan)
+static lngrd_Action *peek_plan_action(lngrd_Plan *plan)
 {
-    return plan->flows[plan->length - 1];
+    return plan->actions[plan->length - 1];
 }
 
 static void destroy_plan(lngrd_Plan *plan)
 {
-    free(plan->flows);
+    free(plan->actions);
     free(plan);
 }
 
-static lngrd_Flow *create_flow(lngrd_List *expressions, size_t index, lngrd_UInt ownership, lngrd_UInt phase, lngrd_UInt checkpoint, lngrd_UInt capacity)
+static lngrd_Action *create_action(lngrd_List *expressions, size_t index, lngrd_UInt ownership, lngrd_UInt phase, lngrd_UInt checkpoint, lngrd_UInt capacity)
 {
-    lngrd_Flow *flow;
+    lngrd_Action *action;
 
-    flow = (lngrd_Flow *) allocate(1, sizeof(lngrd_Flow));
-    flow->expressions = expressions;
-    flow->index = index;
-    flow->ownership = ownership;
-    flow->phase = phase;
-    flow->checkpoint = checkpoint;
-    flow->capacity = capacity;
+    action = (lngrd_Action *) allocate(1, sizeof(lngrd_Action));
+    action->expressions = expressions;
+    action->index = index;
+    action->ownership = ownership;
+    action->phase = phase;
+    action->checkpoint = checkpoint;
+    action->capacity = capacity;
 
-    return flow;
+    return action;
 }
 
-static void burn_flow(lngrd_Flow *flow, lngrd_List *pyre)
+static void burn_action(lngrd_Action *action, lngrd_List *pyre)
 {
-    if (flow->expressions)
+    if (action->expressions)
     {
-        if (flow->ownership & 0x1)
+        if (action->ownership & 0x1)
         {
-            while (flow->expressions->length > 0)
+            while (action->expressions->length > 0)
             {
-                push_list_item(pyre, pop_list_item(flow->expressions));
+                push_list_item(pyre, pop_list_item(action->expressions));
             }
         }
 
-        if (flow->ownership & 0x2)
+        if (action->ownership & 0x2)
         {
-            free(flow->expressions->items);
-            free(flow->expressions);
+            free(action->expressions->items);
+            free(action->expressions);
         }
     }
 
-    free(flow);
+    free(action);
 }
 
 static int can_fit_both(size_t left, size_t right)
