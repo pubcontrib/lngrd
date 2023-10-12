@@ -196,14 +196,14 @@ typedef struct
     lngrd_Flow **flows;
     size_t length;
     size_t capacity;
-} lngrd_Stash;
+} lngrd_Plan;
 
 /*executer state machine*/
 typedef struct
 {
     lngrd_Parser *parser;
     lngrd_SInt errored;
-    lngrd_Stash *stash;
+    lngrd_Plan *plan;
     lngrd_List *arguments;
     lngrd_List *locals;
     lngrd_List *pyre;
@@ -393,11 +393,11 @@ static void unset_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_List *pyre);
 static void burn_map(lngrd_Map *map, lngrd_List *pyre);
 static lngrd_Expression *create_expression(lngrd_ExpressionType type, void *form);
 static void burn_expression(lngrd_Expression *expression, lngrd_List *pyre);
-static lngrd_Stash *create_stash(void);
-static void push_stash_flow(lngrd_Stash *stash, lngrd_Flow *flow);
-static lngrd_Flow *pop_stash_flow(lngrd_Stash *stash);
-static lngrd_Flow *peek_stash_flow(lngrd_Stash *stash);
-static void destroy_stash(lngrd_Stash *stash);
+static lngrd_Plan *create_plan(void);
+static void push_plan_flow(lngrd_Plan *plan, lngrd_Flow *flow);
+static lngrd_Flow *pop_plan_flow(lngrd_Plan *plan);
+static lngrd_Flow *peek_plan_flow(lngrd_Plan *plan);
+static void destroy_plan(lngrd_Plan *plan);
 static lngrd_Flow *create_flow(lngrd_List *expressions, size_t index, lngrd_UInt ownership, lngrd_UInt phase, lngrd_UInt checkpoint, lngrd_UInt capacity);
 static void burn_flow(lngrd_Flow *flow, lngrd_List *pyre);
 static int can_fit_both(size_t left, size_t right);
@@ -1006,7 +1006,7 @@ LNGRD_API void lngrd_start_executer(lngrd_Executer *executer)
 {
     executer->errored = 0;
     executer->globals = create_map();
-    executer->stash = create_stash();
+    executer->plan = create_plan();
     executer->arguments = create_list();
     executer->locals = create_list();
     executer->pyre = create_list();
@@ -1040,7 +1040,7 @@ LNGRD_API void lngrd_start_executer(lngrd_Executer *executer)
 
 LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *parser)
 {
-    lngrd_Stash *stash;
+    lngrd_Plan *plan;
     lngrd_List *arguments;
     lngrd_List *locals;
     lngrd_List *pyre;
@@ -1051,7 +1051,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
         return;
     }
 
-    stash = executer->stash;
+    plan = executer->plan;
     arguments = executer->arguments;
     locals = executer->locals;
     pyre = executer->pyre;
@@ -1077,14 +1077,14 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
         return;
     }
 
-    push_stash_flow(stash, create_flow(expressions, 0, 0x3, 0, 0, 0));
+    push_plan_flow(plan, create_flow(expressions, 0, 0x3, 0, 0, 0));
 
-    while (stash->length > 0)
+    while (plan->length > 0)
     {
         lngrd_Flow *flow;
         int sustain;
 
-        flow = peek_stash_flow(stash);
+        flow = peek_plan_flow(plan);
         expressions = flow->expressions;
         sustain = 0;
 
@@ -1250,7 +1250,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
                     single = create_list();
                     push_list_item(single, form->arguments->items[flow->phase]);
-                    push_stash_flow(stash, create_flow(single, 0, 0x2, 0, flow->checkpoint, flow->capacity));
+                    push_plan_flow(plan, create_flow(single, 0, 0x2, 0, flow->checkpoint, flow->capacity));
                     flow->phase += 1;
                     sustain = 1;
 
@@ -1302,7 +1302,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
                     }
 
                     push_list_item(locals, NULL);
-                    push_stash_flow(stash, create_flow(expressions, 0, 0x0, 0, checkpoint, flow->phase));
+                    push_plan_flow(plan, create_flow(expressions, 0, 0x0, 0, checkpoint, flow->phase));
                     flow->phase += 1;
                     sustain = 1;
 
@@ -1323,7 +1323,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
                     single = create_list();
                     push_list_item(single, form->test);
-                    push_stash_flow(stash, create_flow(single, 0, 0x2, 0, flow->checkpoint, flow->capacity));
+                    push_plan_flow(plan, create_flow(single, 0, 0x2, 0, flow->checkpoint, flow->capacity));
                     flow->phase = 1;
                     sustain = 1;
 
@@ -1337,7 +1337,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
                         single = create_list();
                         push_list_item(single, form->pass);
-                        push_stash_flow(stash, create_flow(single, 0, 0x2, 0, flow->checkpoint, flow->capacity));
+                        push_plan_flow(plan, create_flow(single, 0, 0x2, 0, flow->checkpoint, flow->capacity));
                         flow->phase = 2;
                         sustain = 1;
 
@@ -1361,7 +1361,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
                     single = create_list();
                     push_list_item(single, form->test);
-                    push_stash_flow(stash, create_flow(single, 0, 0x2, 0, flow->checkpoint, flow->capacity));
+                    push_plan_flow(plan, create_flow(single, 0, 0x2, 0, flow->checkpoint, flow->capacity));
                     flow->phase = 1;
                     sustain = 1;
 
@@ -1375,7 +1375,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
                         single = create_list();
                         push_list_item(single, form->body);
-                        push_stash_flow(stash, create_flow(single, 0, 0x2, 0, flow->checkpoint, flow->capacity));
+                        push_plan_flow(plan, create_flow(single, 0, 0x2, 0, flow->checkpoint, flow->capacity));
                         flow->phase = 0;
                         sustain = 1;
 
@@ -1406,7 +1406,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
                     single = create_list();
                     push_list_item(single, form->failable);
-                    push_stash_flow(stash, create_flow(single, 0, 0x2, 0, flow->checkpoint, flow->capacity));
+                    push_plan_flow(plan, create_flow(single, 0, 0x2, 0, flow->checkpoint, flow->capacity));
                     flow->phase = 1;
                     sustain = 1;
 
@@ -1436,7 +1436,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
                     single = create_list();
                     push_list_item(single, form->error);
-                    push_stash_flow(stash, create_flow(single, 0, 0x2, 0, flow->checkpoint, flow->capacity));
+                    push_plan_flow(plan, create_flow(single, 0, 0x2, 0, flow->checkpoint, flow->capacity));
                     flow->phase = 1;
                     sustain = 1;
 
@@ -1461,7 +1461,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
                     single = create_list();
                     push_list_item(single, form->index);
-                    push_stash_flow(stash, create_flow(single, 0, 0x2, 0, flow->checkpoint, flow->capacity));
+                    push_plan_flow(plan, create_flow(single, 0, 0x2, 0, flow->checkpoint, flow->capacity));
                     flow->phase = 1;
                     sustain = 1;
 
@@ -1506,7 +1506,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
                 lngrd_GroupForm *form;
 
                 form = (lngrd_GroupForm *) expression->form;
-                push_stash_flow(stash, create_flow(form->expressions, 0, 0x0, 0, flow->checkpoint, flow->capacity));
+                push_plan_flow(plan, create_flow(form->expressions, 0, 0x0, 0, flow->checkpoint, flow->capacity));
                 flow->index += 1;
                 flow->phase = 0;
                 sustain = 1;
@@ -1528,12 +1528,12 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
         if (!sustain)
         {
-            burn_flow(pop_stash_flow(stash), pyre);
+            burn_flow(pop_plan_flow(plan), pyre);
             burn_pyre(pyre);
         }
     }
 
-    if (stash->length > 0 || arguments->length > 0 || locals->length > 1)
+    if (plan->length > 0 || arguments->length > 0 || locals->length > 1)
     {
         crash_with_message("stack leaked");
     }
@@ -1548,7 +1548,7 @@ LNGRD_API void lngrd_stop_executer(lngrd_Executer *executer)
 
     if (pyre)
     {
-        destroy_stash(executer->stash);
+        destroy_plan(executer->plan);
         burn_list(executer->arguments, pyre);
         burn_list(executer->locals, pyre);
         burn_map(executer->globals, pyre);
@@ -3868,48 +3868,48 @@ static void burn_expression(lngrd_Expression *expression, lngrd_List *pyre)
     free(expression);
 }
 
-static lngrd_Stash *create_stash(void)
+static lngrd_Plan *create_plan(void)
 {
-    lngrd_Stash *stash;
+    lngrd_Plan *plan;
 
-    stash = (lngrd_Stash *) allocate(1, sizeof(lngrd_Stash));
-    stash->flows = (lngrd_Flow **) allocate(8, sizeof(lngrd_Flow *));
-    stash->length = 0;
-    stash->capacity = 8;
+    plan = (lngrd_Plan *) allocate(1, sizeof(lngrd_Plan));
+    plan->flows = (lngrd_Flow **) allocate(8, sizeof(lngrd_Flow *));
+    plan->length = 0;
+    plan->capacity = 8;
 
-    return stash;
+    return plan;
 }
 
-static void push_stash_flow(lngrd_Stash *stash, lngrd_Flow *flow)
+static void push_plan_flow(lngrd_Plan *plan, lngrd_Flow *flow)
 {
-    if (stash->length == stash->capacity)
+    if (plan->length == plan->capacity)
     {
-        if (!can_fit_both(stash->capacity, stash->capacity))
+        if (!can_fit_both(plan->capacity, plan->capacity))
         {
             crash_with_message("oversized memory requested");
         }
 
-        stash->capacity *= 2;
-        stash->flows = (lngrd_Flow **) reallocate(stash->flows, stash->capacity, sizeof(lngrd_Flow *));
+        plan->capacity *= 2;
+        plan->flows = (lngrd_Flow **) reallocate(plan->flows, plan->capacity, sizeof(lngrd_Flow *));
     }
 
-    stash->flows[stash->length++] = flow;
+    plan->flows[plan->length++] = flow;
 }
 
-static lngrd_Flow *pop_stash_flow(lngrd_Stash *stash)
+static lngrd_Flow *pop_plan_flow(lngrd_Plan *plan)
 {
-    return stash->flows[--stash->length];
+    return plan->flows[--plan->length];
 }
 
-static lngrd_Flow *peek_stash_flow(lngrd_Stash *stash)
+static lngrd_Flow *peek_plan_flow(lngrd_Plan *plan)
 {
-    return stash->flows[stash->length - 1];
+    return plan->flows[plan->length - 1];
 }
 
-static void destroy_stash(lngrd_Stash *stash)
+static void destroy_plan(lngrd_Plan *plan)
 {
-    free(stash->flows);
-    free(stash);
+    free(plan->flows);
+    free(plan);
 }
 
 static lngrd_Flow *create_flow(lngrd_List *expressions, size_t index, lngrd_UInt ownership, lngrd_UInt phase, lngrd_UInt checkpoint, lngrd_UInt capacity)
