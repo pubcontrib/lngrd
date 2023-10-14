@@ -359,6 +359,7 @@ static void do_write_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd
 static void do_delete_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity);
 static void do_query_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity);
 static void do_exit_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity);
+static void do_deserialize_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity);
 static void do_type_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity);
 static void set_global_function(const char *name, void (*work)(lngrd_Executer *, lngrd_List *, lngrd_UInt), lngrd_Executer *executer);
 static void set_executer_error(const char *message, lngrd_Executer *executer);
@@ -1033,6 +1034,7 @@ LNGRD_API void lngrd_start_executer(lngrd_Executer *executer)
     set_global_function("delete", do_delete_work, executer);
     set_global_function("query", do_query_work, executer);
     set_global_function("exit", do_exit_work, executer);
+    set_global_function("deserialize", do_deserialize_work, executer);
     set_global_function("type", do_type_work, executer);
 
     push_list_item(executer->locals, create_block(LNGRD_BLOCK_TYPE_MAP, create_map(), 1));
@@ -3022,6 +3024,63 @@ static void do_exit_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_
     exit(c->value);
 
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, cstring_to_string(""), 0), executer);
+}
+
+static void do_deserialize_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity)
+{
+    lngrd_Block *code, *value;
+    lngrd_String *c;
+    lngrd_Lexer lexer;
+    lngrd_Parser parser;
+    lngrd_Expression *literal;
+    lngrd_LiteralForm *form;
+
+    if (capacity < 2)
+    {
+        set_executer_error("absent argument", executer);
+        return;
+    }
+
+    code = arguments->items[arguments->length - capacity + 1];
+
+    if (code->type != LNGRD_BLOCK_TYPE_STRING)
+    {
+        set_executer_error("alien argument", executer);
+        return;
+    }
+
+    c = (lngrd_String *) code->data;
+
+    lngrd_start_lexer(&lexer, c);
+    lngrd_start_parser(&parser, &lexer);
+    lngrd_progress_parser(&parser);
+
+    if (parser.errored || parser.closed)
+    {
+        lngrd_stop_parser(&parser);
+        burn_list(parser.stack, executer->pyre);
+        set_executer_error("codec error", executer);
+        return;
+    }
+
+    literal = (lngrd_Expression *) parser.expression->data;
+
+    if (literal->type != LNGRD_EXPRESSION_TYPE_LITERAL)
+    {
+        lngrd_stop_parser(&parser);
+        burn_list(parser.stack, executer->pyre);
+        set_executer_error("codec error", executer);
+        return;
+    }
+
+    form = (lngrd_LiteralForm *) literal->form;
+    value = form->block;
+    value->references += 1;
+    lngrd_stop_parser(&parser);
+    burn_list(parser.stack, executer->pyre);
+    value->references -= 1;
+
+    set_executor_result(value, executer);
 }
 
 static void do_type_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity)

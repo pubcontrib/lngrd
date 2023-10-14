@@ -516,5 +516,13 @@ test_code '(@write "/dev/stdout" catch \ (<argument 1>) /)' 'absent argument' 0
 test_code '(@write "/dev/stdout" catch \ (<argument 1> "x") argument 1 /)' 'absent argument' 0
 test_code '(@write "/dev/stdout" catch \ (<(@write "/dev/stdout" argument "")> "a" "b" "c") /)' 'alien argument' 0
 test_code '(@write "/dev/stdout" catch \ (<(@write "/dev/stdout" argument <>)> "a" "b" "c") /)' 'alien argument' 0
+test_code 'if (@equals (@deserialize "0") 0) (@write "/dev/stdout" "x")' 'x' 0
+test_code 'if (@equals (@deserialize "\"\"") "") (@write "/dev/stdout" "x")' 'x' 0
+test_code 'if (@not (@deserialize "<>")) (@write "/dev/stdout" "x")' 'x' 0
+test_code '(@deserialize "<(@write \"/dev/stdout\" \"x\")>") |$f ($f)' 'x' 0
+test_code '(@write "/dev/stdout" catch \ (@deserialize "") /)' 'codec error' 0
+test_code '(@write "/dev/stdout" catch \ (@deserialize "#comment") /)' 'codec error' 0
+test_code '(@write "/dev/stdout" catch \ (@deserialize "@write") /)' 'codec error' 0
+test_code '(@write "/dev/stdout" catch \ (@deserialize "if 0 1") /)' 'codec error' 0
 
 write_status 'PASS' 32
