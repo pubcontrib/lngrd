@@ -988,19 +988,26 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
 
 LNGRD_API void lngrd_stop_parser(lngrd_Parser *parser)
 {
+    lngrd_List *pyre;
+
+    pyre = create_list();
+
+    if (parser->stack)
+    {
+        burn_list(parser->stack, pyre);
+        parser->stack = NULL;
+    }
+
     if (parser->expression)
     {
-        lngrd_List *pyre;
-
-        pyre = create_list();
-
         push_list_item(pyre, parser->expression);
         parser->expression = NULL;
-        burn_pyre(pyre);
-
-        free(pyre->items);
-        free(pyre);
     }
+
+    burn_pyre(pyre);
+
+    free(pyre->items);
+    free(pyre);
 }
 
 LNGRD_API void lngrd_start_executer(lngrd_Executer *executer)
@@ -1070,7 +1077,6 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
         }
     }
 
-    burn_list(parser->stack, pyre);
     executer->errored = parser->errored;
 
     if (executer->errored)
@@ -3058,7 +3064,6 @@ static void do_deserialize_work(lngrd_Executer *executer, lngrd_List *arguments,
     if (parser.errored || parser.closed)
     {
         lngrd_stop_parser(&parser);
-        burn_list(parser.stack, executer->pyre);
         set_executer_error("codec error", executer);
         return;
     }
@@ -3068,7 +3073,6 @@ static void do_deserialize_work(lngrd_Executer *executer, lngrd_List *arguments,
     if (literal->type != LNGRD_EXPRESSION_TYPE_LITERAL)
     {
         lngrd_stop_parser(&parser);
-        burn_list(parser.stack, executer->pyre);
         set_executer_error("codec error", executer);
         return;
     }
@@ -3077,7 +3081,6 @@ static void do_deserialize_work(lngrd_Executer *executer, lngrd_List *arguments,
     value = form->block;
     value->references += 1;
     lngrd_stop_parser(&parser);
-    burn_list(parser.stack, executer->pyre);
     value->references -= 1;
 
     set_executor_result(value, executer);
