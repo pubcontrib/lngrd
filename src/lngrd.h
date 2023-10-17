@@ -119,6 +119,7 @@ typedef struct
 typedef struct
 {
     lngrd_List *expressions;
+    lngrd_SInt inlined;
 } lngrd_Function;
 
 /*classifier of abstract syntax tree node*/
@@ -1274,15 +1275,15 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
                 }
                 else if (action->phase == form->arguments->length)
                 {
-                    lngrd_Block *function;
-                    lngrd_List *expressions;
+                    lngrd_Block *first;
+                    lngrd_Function *function;
                     lngrd_UInt checkpoint;
 
                     push_list_item(arguments, executer->result);
                     executer->result = NULL;
-                    function = arguments->items[arguments->length - action->phase];
+                    first = arguments->items[arguments->length - action->phase];
 
-                    if (function->type != LNGRD_BLOCK_TYPE_FUNCTION)
+                    if (first->type != LNGRD_BLOCK_TYPE_FUNCTION)
                     {
                         size_t index;
 
@@ -1295,30 +1296,11 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
                         break;
                     }
 
-                    expressions = ((lngrd_Function *) function->data)->expressions;
-                    checkpoint = executer->arguments->length;
-
-                    if (expressions->length == 1)
-                    {
-                        lngrd_Block *block;
-
-                        block = expressions->items[0];
-
-                        if (block->type == LNGRD_BLOCK_TYPE_EXPRESSION)
-                        {
-                            lngrd_Expression *expression;
-
-                            expression = (lngrd_Expression *) block->data;
-
-                            if (expression->type == LNGRD_EXPRESSION_TYPE_NATIVE)
-                            {
-                                checkpoint = action->checkpoint;
-                            }
-                        }
-                    }
+                    function = (lngrd_Function *) first->data;
+                    checkpoint = function->inlined ? action->checkpoint : executer->arguments->length;
 
                     push_list_item(locals, NULL);
-                    push_plan_action(plan, create_action(expressions, 0, 0x0, 0, checkpoint, action->phase));
+                    push_plan_action(plan, create_action(function->expressions, 0, 0x0, 0, checkpoint, action->phase));
                     action->phase += 1;
                     sustain = 1;
 
@@ -3148,6 +3130,7 @@ static void set_global_function(const char *name, void (*work)(lngrd_Executer *,
     form->work = work;
     key = create_block(LNGRD_BLOCK_TYPE_STRING, cstring_to_string(name), 1);
     function = create_function();
+    function->inlined = 1;
     expression = create_expression(LNGRD_EXPRESSION_TYPE_NATIVE, form);
     push_list_item(function->expressions, create_block(LNGRD_BLOCK_TYPE_EXPRESSION, expression, 1));
     value = create_block(LNGRD_BLOCK_TYPE_FUNCTION, function, 1);
@@ -3765,6 +3748,7 @@ static lngrd_Function *create_function(void)
 
     function = (lngrd_Function *) allocate(1, sizeof(lngrd_Function));
     function->expressions = create_list();
+    function->inlined = 0;
 
     return function;
 }
