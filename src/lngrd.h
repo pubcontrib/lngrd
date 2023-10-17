@@ -115,6 +115,12 @@ typedef struct
     size_t capacity;
 } lngrd_Map;
 
+/*expression sequence*/
+typedef struct
+{
+    lngrd_List *expressions;
+} lngrd_Function;
+
 /*classifier of abstract syntax tree node*/
 typedef enum
 {
@@ -392,6 +398,8 @@ static lngrd_Block *get_map_item(lngrd_Map *map, lngrd_Block *key);
 static void set_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_Block *block, lngrd_List *pyre);
 static void unset_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_List *pyre);
 static void burn_map(lngrd_Map *map, lngrd_List *pyre);
+static lngrd_Function *create_function(void);
+static void burn_function(lngrd_Function *function, lngrd_List *pyre);
 static lngrd_Expression *create_expression(lngrd_ExpressionType type, void *form);
 static void burn_expression(lngrd_Expression *expression, lngrd_List *pyre);
 static lngrd_Plan *create_plan(void);
@@ -555,10 +563,10 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
                 }
                 else if (type == LNGRD_BLOCK_TYPE_FUNCTION)
                 {
-                    lngrd_List *list;
+                    lngrd_Function *function;
 
-                    list = (lngrd_List *) block->data;
-                    push_list_item(list, offer);
+                    function = (lngrd_Function *) block->data;
+                    push_list_item(function->expressions, offer);
                 }
             }
             else if (pending->type == LNGRD_EXPRESSION_TYPE_LOOKUP || pending->type == LNGRD_EXPRESSION_TYPE_ASSIGN || pending->type == LNGRD_EXPRESSION_TYPE_UNASSIGN)
@@ -949,7 +957,7 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
                         lngrd_LiteralForm *form;
                         lngrd_Block *block;
 
-                        block = create_block(LNGRD_BLOCK_TYPE_FUNCTION, create_list(), 1);
+                        block = create_block(LNGRD_BLOCK_TYPE_FUNCTION, create_function(), 1);
 
                         form = (lngrd_LiteralForm *) allocate(1, sizeof(lngrd_LiteralForm));
                         form->block = block;
@@ -1287,7 +1295,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
                         break;
                     }
 
-                    expressions = (lngrd_List *) function->data;
+                    expressions = ((lngrd_Function *) function->data)->expressions;
                     checkpoint = executer->arguments->length;
 
                     if (expressions->length == 1)
@@ -3131,19 +3139,19 @@ static void do_type_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_
 
 static void set_global_function(const char *name, void (*work)(lngrd_Executer *, lngrd_List *, lngrd_UInt), lngrd_Executer *executer)
 {
-    lngrd_Expression *expression;
     lngrd_NativeForm *form;
-    lngrd_List *expressions;
-    lngrd_Block *function, *key;
+    lngrd_Block *key, *value;
+    lngrd_Function *function;
+    lngrd_Expression *expression;
 
     form = (lngrd_NativeForm *) allocate(1, sizeof(lngrd_NativeForm));
     form->work = work;
-    expression = create_expression(LNGRD_EXPRESSION_TYPE_NATIVE, form);
-    expressions = create_list();
-    push_list_item(expressions, create_block(LNGRD_BLOCK_TYPE_EXPRESSION, expression, 1));
-    function = create_block(LNGRD_BLOCK_TYPE_FUNCTION, expressions, 1);
     key = create_block(LNGRD_BLOCK_TYPE_STRING, cstring_to_string(name), 1);
-    set_map_item(executer->globals, key, function, executer->pyre);
+    function = create_function();
+    expression = create_expression(LNGRD_EXPRESSION_TYPE_NATIVE, form);
+    push_list_item(function->expressions, create_block(LNGRD_BLOCK_TYPE_EXPRESSION, expression, 1));
+    value = create_block(LNGRD_BLOCK_TYPE_FUNCTION, function, 1);
+    set_map_item(executer->globals, key, value, executer->pyre);
 }
 
 static void set_executer_error(const char *message, lngrd_Executer *executer)
@@ -3237,11 +3245,13 @@ static int is_block_truthy(lngrd_Block *block)
             return ((lngrd_String *) block->data)->length > 0;
 
         case LNGRD_BLOCK_TYPE_LIST:
-        case LNGRD_BLOCK_TYPE_FUNCTION:
             return ((lngrd_List *) block->data)->length > 0;
 
         case LNGRD_BLOCK_TYPE_MAP:
             return ((lngrd_Map *) block->data)->length > 0;
+
+        case LNGRD_BLOCK_TYPE_FUNCTION:
+            return ((lngrd_Function *) block->data)->expressions->length > 0;
 
         default:
             crash_with_message("unsupported branch");
@@ -3276,12 +3286,15 @@ static void burn_pyre(lngrd_List *pyre)
                     break;
 
                 case LNGRD_BLOCK_TYPE_LIST:
-                case LNGRD_BLOCK_TYPE_FUNCTION:
                     burn_list((lngrd_List *) fuel->data, pyre);
                     break;
 
                 case LNGRD_BLOCK_TYPE_MAP:
                     burn_map((lngrd_Map *) fuel->data, pyre);
+                    break;
+
+                case LNGRD_BLOCK_TYPE_FUNCTION:
+                    burn_function((lngrd_Function *) fuel->data, pyre);
                     break;
 
                 case LNGRD_BLOCK_TYPE_EXPRESSION:
@@ -3744,6 +3757,23 @@ static void burn_map(lngrd_Map *map, lngrd_List *pyre)
 
     free(map->items);
     free(map);
+}
+
+static lngrd_Function *create_function(void)
+{
+    lngrd_Function *function;
+
+    function = (lngrd_Function *) allocate(1, sizeof(lngrd_Function));
+    function->expressions = create_list();
+
+    return function;
+}
+
+static void burn_function(lngrd_Function *function, lngrd_List *pyre)
+{
+    burn_list(function->expressions, pyre);
+
+    free(function);
 }
 
 static lngrd_Expression *create_expression(lngrd_ExpressionType type, void *form)
