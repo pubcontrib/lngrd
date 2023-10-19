@@ -119,6 +119,7 @@ typedef struct
 typedef struct
 {
     lngrd_List *expressions;
+    lngrd_String *source;
     lngrd_SInt inlined;
 } lngrd_Function;
 
@@ -368,7 +369,7 @@ static void do_query_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd
 static void do_exit_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity);
 static void do_deserialize_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity);
 static void do_type_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity);
-static void set_global_function(const char *name, void (*work)(lngrd_Executer *, lngrd_List *, lngrd_UInt), lngrd_Executer *executer);
+static void set_global_function(const char *name, const char *source, void (*work)(lngrd_Executer *, lngrd_List *, lngrd_UInt), lngrd_Executer *executer);
 static void set_executer_error(const char *message, lngrd_Executer *executer);
 static void set_executor_result(lngrd_Block *result, lngrd_Executer *executer);
 static lngrd_Block *create_block(lngrd_BlockType type, void *data, size_t references);
@@ -957,8 +958,11 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
                         lngrd_Expression *expression;
                         lngrd_LiteralForm *form;
                         lngrd_Block *block;
+                        lngrd_Function *function;
 
-                        block = create_block(LNGRD_BLOCK_TYPE_FUNCTION, create_function(), 1);
+                        function = create_function();
+                        function->source = create_string(NULL, token.start);
+                        block = create_block(LNGRD_BLOCK_TYPE_FUNCTION, function, 1);
 
                         form = (lngrd_LiteralForm *) allocate(1, sizeof(lngrd_LiteralForm));
                         form->block = block;
@@ -969,10 +973,36 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
                     }
                     else if (symbol == '>')
                     {
-                        if (stack->length == 0 || ((lngrd_Expression *) peek_list_item(stack)->data)->type != LNGRD_EXPRESSION_TYPE_LITERAL)
+                        lngrd_Expression *expression;
+                        lngrd_LiteralForm *form;
+                        lngrd_Function *function;
+                        size_t start, end, length;
+
+                        if (stack->length == 0)
                         {
                             parser->errored = 1;
                             return;
+                        }
+
+                        expression = (lngrd_Expression *) peek_list_item(stack)->data;
+
+                        if (expression->type != LNGRD_EXPRESSION_TYPE_LITERAL)
+                        {
+                            parser->errored = 1;
+                            return;
+                        }
+
+                        form = (lngrd_LiteralForm *) expression->form;
+                        function = (lngrd_Function *) form->block->data;
+                        start = function->source->length;
+                        end = token.start + 1;
+                        length = end - start;
+                        function->source->length = length;
+
+                        if (length > 0)
+                        {
+                            function->source->bytes = (char *) allocate(length, sizeof(char));
+                            memcpy(function->source->bytes, lexer->code->bytes + start, length);
                         }
 
                         terminate = 1;
@@ -1029,29 +1059,29 @@ LNGRD_API void lngrd_start_executer(lngrd_Executer *executer)
     executer->pyre = create_list();
     executer->result = NULL;
 
-    set_global_function("add", do_add_work, executer);
-    set_global_function("subtract", do_subtract_work, executer);
-    set_global_function("multiply", do_multiply_work, executer);
-    set_global_function("divide", do_divide_work, executer);
-    set_global_function("modulo", do_modulo_work, executer);
-    set_global_function("increment", do_increment_work, executer);
-    set_global_function("decrement", do_decrement_work, executer);
-    set_global_function("and", do_and_work, executer);
-    set_global_function("or", do_or_work, executer);
-    set_global_function("not", do_not_work, executer);
-    set_global_function("precedes", do_precedes_work, executer);
-    set_global_function("succeeds", do_succeeds_work, executer);
-    set_global_function("equals", do_equals_work, executer);
-    set_global_function("length", do_length_work, executer);
-    set_global_function("slice", do_slice_work, executer);
-    set_global_function("merge", do_merge_work, executer);
-    set_global_function("read", do_read_work, executer);
-    set_global_function("write", do_write_work, executer);
-    set_global_function("delete", do_delete_work, executer);
-    set_global_function("query", do_query_work, executer);
-    set_global_function("exit", do_exit_work, executer);
-    set_global_function("deserialize", do_deserialize_work, executer);
-    set_global_function("type", do_type_work, executer);
+    set_global_function("add", "<(@add argument 1 argument 2)>", do_add_work, executer);
+    set_global_function("subtract", "<(@subtract argument 1 argument 2)>", do_subtract_work, executer);
+    set_global_function("multiply", "<(@multiply argument 1 argument 2)>", do_multiply_work, executer);
+    set_global_function("divide", "<(@divide argument 1 argument 2)>", do_divide_work, executer);
+    set_global_function("modulo", "<(@modulo argument 1 argument 2)>", do_modulo_work, executer);
+    set_global_function("increment", "<(@increment argument 1)>", do_increment_work, executer);
+    set_global_function("decrement", "<(@decrement argument 1)>", do_decrement_work, executer);
+    set_global_function("and", "<(@and argument 1 argument 2)>", do_and_work, executer);
+    set_global_function("or", "<(@or argument 1 argument 2)>", do_or_work, executer);
+    set_global_function("not", "<(@not argument 1)>", do_not_work, executer);
+    set_global_function("precedes", "<(@precedes argument 1 argument 2)>", do_precedes_work, executer);
+    set_global_function("succeeds", "<(@succeeds argument 1 argument 2)>", do_succeeds_work, executer);
+    set_global_function("equals", "<(@equals argument 1 argument 2)>", do_equals_work, executer);
+    set_global_function("length", "<(@length argument 1)>", do_length_work, executer);
+    set_global_function("slice", "<(@slice argument 1 argument 2 argument 3)>", do_slice_work, executer);
+    set_global_function("merge", "<(@merge argument 1 argument 2)>", do_merge_work, executer);
+    set_global_function("read", "<(@read argument 1 argument 2)>", do_read_work, executer);
+    set_global_function("write", "<(@write argument 1 argument 2)>", do_write_work, executer);
+    set_global_function("delete", "<(@delete argument 1)>", do_delete_work, executer);
+    set_global_function("query", "<(@query argument 1)>", do_query_work, executer);
+    set_global_function("exit", "<(@exit argument 1)>", do_exit_work, executer);
+    set_global_function("deserialize", "<(@deserialize argument 1)>", do_deserialize_work, executer);
+    set_global_function("type", "<(@type argument 1)>", do_type_work, executer);
 
     push_list_item(executer->locals, create_block(LNGRD_BLOCK_TYPE_MAP, create_map(), 1));
 }
@@ -3119,7 +3149,7 @@ static void do_type_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, cstring_to_string(type), 0), executer);
 }
 
-static void set_global_function(const char *name, void (*work)(lngrd_Executer *, lngrd_List *, lngrd_UInt), lngrd_Executer *executer)
+static void set_global_function(const char *name, const char *source, void (*work)(lngrd_Executer *, lngrd_List *, lngrd_UInt), lngrd_Executer *executer)
 {
     lngrd_NativeForm *form;
     lngrd_Block *key, *value;
@@ -3130,6 +3160,7 @@ static void set_global_function(const char *name, void (*work)(lngrd_Executer *,
     form->work = work;
     key = create_block(LNGRD_BLOCK_TYPE_STRING, cstring_to_string(name), 1);
     function = create_function();
+    function->source = cstring_to_string(source);
     function->inlined = 1;
     expression = create_expression(LNGRD_EXPRESSION_TYPE_NATIVE, form);
     push_list_item(function->expressions, create_block(LNGRD_BLOCK_TYPE_EXPRESSION, expression, 1));
@@ -3748,6 +3779,7 @@ static lngrd_Function *create_function(void)
 
     function = (lngrd_Function *) allocate(1, sizeof(lngrd_Function));
     function->expressions = create_list();
+    function->source = NULL;
     function->inlined = 0;
 
     return function;
@@ -3756,6 +3788,7 @@ static lngrd_Function *create_function(void)
 static void burn_function(lngrd_Function *function, lngrd_List *pyre)
 {
     burn_list(function->expressions, pyre);
+    destroy_string(function->source);
 
     free(function);
 }
