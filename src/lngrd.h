@@ -401,6 +401,7 @@ static void set_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_Block *block, l
 static void unset_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_List *pyre);
 static void burn_map(lngrd_Map *map, lngrd_List *pyre);
 static lngrd_Function *create_function(void);
+static lngrd_SInt compare_functions(lngrd_Function *left, lngrd_Function *right);
 static void burn_function(lngrd_Function *function, lngrd_List *pyre);
 static lngrd_Expression *create_expression(lngrd_ExpressionType type, void *form);
 static void burn_expression(lngrd_Expression *expression, lngrd_List *pyre);
@@ -2416,20 +2417,7 @@ static void do_precedes_work(lngrd_Executer *executer, lngrd_List *arguments, ln
     }
 
     left = arguments->items[arguments->length - capacity + 1];
-
-    if (left->type == LNGRD_BLOCK_TYPE_FUNCTION)
-    {
-        set_executer_error("alien argument", executer);
-        return;
-    }
-
     right = arguments->items[arguments->length - capacity + 2];
-
-    if (right->type == LNGRD_BLOCK_TYPE_FUNCTION)
-    {
-        set_executer_error("alien argument", executer);
-        return;
-    }
 
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, compare_blocks(left, right) < 0), 0), executer);
 }
@@ -2445,20 +2433,7 @@ static void do_succeeds_work(lngrd_Executer *executer, lngrd_List *arguments, ln
     }
 
     left = arguments->items[arguments->length - capacity + 1];
-
-    if (left->type == LNGRD_BLOCK_TYPE_FUNCTION)
-    {
-        set_executer_error("alien argument", executer);
-        return;
-    }
-
     right = arguments->items[arguments->length - capacity + 2];
-
-    if (right->type == LNGRD_BLOCK_TYPE_FUNCTION)
-    {
-        set_executer_error("alien argument", executer);
-        return;
-    }
 
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, compare_blocks(left, right) > 0), 0), executer);
 }
@@ -2474,20 +2449,7 @@ static void do_equals_work(lngrd_Executer *executer, lngrd_List *arguments, lngr
     }
 
     left = arguments->items[arguments->length - capacity + 1];
-
-    if (left->type == LNGRD_BLOCK_TYPE_FUNCTION)
-    {
-        set_executer_error("alien argument", executer);
-        return;
-    }
-
     right = arguments->items[arguments->length - capacity + 2];
-
-    if (right->type == LNGRD_BLOCK_TYPE_FUNCTION)
-    {
-        set_executer_error("alien argument", executer);
-        return;
-    }
 
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, compare_blocks(left, right) == 0), 0), executer);
 }
@@ -3241,6 +3203,9 @@ static lngrd_SInt compare_blocks(lngrd_Block *x, lngrd_Block *y)
         case LNGRD_BLOCK_TYPE_STRING:
             return compare_strings((lngrd_String *) x->data, (lngrd_String *) y->data);
 
+        case LNGRD_BLOCK_TYPE_FUNCTION:
+            return compare_functions((lngrd_Function *) x->data, (lngrd_Function *) y->data);
+
         default:
             crash_with_message("unsupported branch");
     }
@@ -3783,6 +3748,11 @@ static lngrd_Function *create_function(void)
     function->inlined = 0;
 
     return function;
+}
+
+static lngrd_SInt compare_functions(lngrd_Function *left, lngrd_Function *right)
+{
+    return compare_strings(left->source, right->source);
 }
 
 static void burn_function(lngrd_Function *function, lngrd_List *pyre)
