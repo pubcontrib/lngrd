@@ -346,6 +346,7 @@ static int is_shorthand_symbol(char symbol);
 static int is_keyword_symbol(char symbol);
 static int parse_identifier(const lngrd_String *string, lngrd_String **result);
 static int unescape_string(const lngrd_String *string, lngrd_String **result);
+static int escape_string(const lngrd_String *string, lngrd_String **result);
 static void do_add_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity);
 static void do_subtract_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity);
 static void do_multiply_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity);
@@ -367,6 +368,7 @@ static void do_write_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd
 static void do_delete_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity);
 static void do_query_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity);
 static void do_exit_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity);
+static void do_serialize_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity);
 static void do_deserialize_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity);
 static void do_type_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity);
 static void set_global_function(const char *name, const char *source, void (*work)(lngrd_Executer *, lngrd_List *, lngrd_UInt), lngrd_Executer *executer);
@@ -379,6 +381,7 @@ static int is_block_truthy(lngrd_Block *block);
 static void burn_pyre(lngrd_List *pyre);
 static lngrd_Number *create_number(lngrd_NumberLayout layout, lngrd_SInt value);
 static int string_to_number(const lngrd_String *string, lngrd_Number **result);
+static int number_to_string(const lngrd_Number *number, lngrd_String **result);
 static lngrd_SInt compare_numbers(lngrd_Number *left, lngrd_Number *right);
 static lngrd_UInt hash_number(lngrd_Number *number);
 static void destroy_number(lngrd_Number *number);
@@ -1081,6 +1084,7 @@ LNGRD_API void lngrd_start_executer(lngrd_Executer *executer)
     set_global_function("delete", "<(@delete argument 1)>", do_delete_work, executer);
     set_global_function("query", "<(@query argument 1)>", do_query_work, executer);
     set_global_function("exit", "<(@exit argument 1)>", do_exit_work, executer);
+    set_global_function("serialize", "<(@serialize argument 1)>", do_serialize_work, executer);
     set_global_function("deserialize", "<(@deserialize argument 1)>", do_deserialize_work, executer);
     set_global_function("type", "<(@type argument 1)>", do_type_work, executer);
 
@@ -2099,6 +2103,254 @@ static int unescape_string(const lngrd_String *string, lngrd_String **result)
     return 1;
 }
 
+static int escape_string(const lngrd_String *string, lngrd_String **result)
+{
+    char *bytes;
+    size_t index, length, escapes;
+
+    for (index = 0, escapes = 0; index < string->length; index++)
+    {
+        unsigned char symbol;
+
+        symbol = string->bytes[index];
+
+        if (symbol >= 32 && symbol <= 126 && symbol != '\\' && symbol != '"')
+        {
+            continue;
+        }
+        else if (symbol == '\\' || symbol == '"' || symbol == '\t' || symbol == '\r' || symbol == '\n')
+        {
+            escapes += 1;
+        }
+        else
+        {
+            escapes += 3;
+        }
+    }
+
+    if (escapes == 0)
+    {
+        if (!can_fit_both(string->length, 2))
+        {
+            return 0;
+        }
+
+        length = string->length + 2;
+        bytes = (char *) allocate(length, sizeof(char));
+
+        if (string->length > 0)
+        {
+            memcpy(bytes + 1, string->bytes, string->length);
+        }
+    }
+    else
+    {
+        size_t offset;
+
+        if (!can_fit_both(string->length, 2) || !can_fit_both(string->length + 2, escapes))
+        {
+            return 0;
+        }
+
+        length = string->length + 2 + escapes;
+        bytes = (char *) allocate(length, sizeof(char));
+
+        for (index = 0, offset = 1; index < string->length; index++)
+        {
+            unsigned char symbol;
+
+            symbol = string->bytes[index];
+
+            if (symbol >= 32 && symbol <= 126 && symbol != '\\' && symbol != '"')
+            {
+                bytes[offset++] = symbol;
+            }
+            else
+            {
+                switch (symbol)
+                {
+                    case '\\':
+                        bytes[offset++] = '\\';
+                        bytes[offset++] = '\\';
+                        break;
+
+                    case '"':
+                        bytes[offset++] = '\\';
+                        bytes[offset++] = '"';
+                        break;
+
+                    case '\t':
+                        bytes[offset++] = '\\';
+                        bytes[offset++] = 't';
+                        break;
+
+                    case '\r':
+                        bytes[offset++] = '\\';
+                        bytes[offset++] = 'r';
+                        break;
+
+                    case '\n':
+                        bytes[offset++] = '\\';
+                        bytes[offset++] = 'n';
+                        break;
+
+                    default:
+                        bytes[offset++] = '\\';
+                        bytes[offset++] = 'x';
+
+                        switch (symbol & 0xf0)
+                        {
+                            case 0x00:
+                                bytes[offset++] = '0';
+                                break;
+
+                            case 0x10:
+                                bytes[offset++] = '1';
+                                break;
+
+                            case 0x20:
+                                bytes[offset++] = '2';
+                                break;
+
+                            case 0x30:
+                                bytes[offset++] = '3';
+                                break;
+
+                            case 0x40:
+                                bytes[offset++] = '4';
+                                break;
+
+                            case 0x50:
+                                bytes[offset++] = '5';
+                                break;
+
+                            case 0x60:
+                                bytes[offset++] = '6';
+                                break;
+
+                            case 0x70:
+                                bytes[offset++] = '7';
+                                break;
+
+                            case 0x80:
+                                bytes[offset++] = '8';
+                                break;
+
+                            case 0x90:
+                                bytes[offset++] = '9';
+                                break;
+
+                            case 0xa0:
+                                bytes[offset++] = 'a';
+                                break;
+
+                            case 0xb0:
+                                bytes[offset++] = 'b';
+                                break;
+
+                            case 0xc0:
+                                bytes[offset++] = 'c';
+                                break;
+
+                            case 0xd0:
+                                bytes[offset++] = 'd';
+                                break;
+
+                            case 0xe0:
+                                bytes[offset++] = 'e';
+                                break;
+
+                            case 0xf0:
+                                bytes[offset++] = 'f';
+                                break;
+
+                            default:
+                                break;
+                        }
+
+                        switch (symbol & 0x0f)
+                        {
+                            case 0x00:
+                                bytes[offset++] = '0';
+                                break;
+
+                            case 0x01:
+                                bytes[offset++] = '1';
+                                break;
+
+                            case 0x02:
+                                bytes[offset++] = '2';
+                                break;
+
+                            case 0x03:
+                                bytes[offset++] = '3';
+                                break;
+
+                            case 0x04:
+                                bytes[offset++] = '4';
+                                break;
+
+                            case 0x05:
+                                bytes[offset++] = '5';
+                                break;
+
+                            case 0x06:
+                                bytes[offset++] = '6';
+                                break;
+
+                            case 0x07:
+                                bytes[offset++] = '7';
+                                break;
+
+                            case 0x08:
+                                bytes[offset++] = '8';
+                                break;
+
+                            case 0x09:
+                                bytes[offset++] = '9';
+                                break;
+
+                            case 0x0a:
+                                bytes[offset++] = 'a';
+                                break;
+
+                            case 0x0b:
+                                bytes[offset++] = 'b';
+                                break;
+
+                            case 0x0c:
+                                bytes[offset++] = 'c';
+                                break;
+
+                            case 0x0d:
+                                bytes[offset++] = 'd';
+                                break;
+
+                            case 0x0e:
+                                bytes[offset++] = 'e';
+                                break;
+
+                            case 0x0f:
+                                bytes[offset++] = 'f';
+                                break;
+
+                            default:
+                                break;
+                        }
+
+                        break;
+                }
+            }
+        }
+    }
+
+    bytes[0] = '"';
+    bytes[length - 1] = '"';
+    (*result) = create_string(bytes, length);
+
+    return 1;
+}
+
 static void do_add_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity)
 {
     lngrd_Block *left, *right;
@@ -3014,6 +3266,66 @@ static void do_exit_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, cstring_to_string(""), 0), executer);
 }
 
+static void do_serialize_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity)
+{
+    lngrd_Block *value;
+    lngrd_String *string;
+
+    if (capacity < 2)
+    {
+        set_executer_error("absent argument", executer);
+        return;
+    }
+
+    value = arguments->items[arguments->length - capacity + 1];
+    string = NULL;
+
+    switch (value->type)
+    {
+        case LNGRD_BLOCK_TYPE_NUMBER:
+        {
+            if (!number_to_string((lngrd_Number *) value->data, &string))
+            {
+                set_executer_error("codec error", executer);
+                return;
+            }
+
+            break;
+        }
+
+        case LNGRD_BLOCK_TYPE_STRING:
+        {
+            if (!escape_string((lngrd_String *) value->data, &string))
+            {
+                set_executer_error("codec error", executer);
+                return;
+            }
+
+            break;
+        }
+
+        case LNGRD_BLOCK_TYPE_FUNCTION:
+        {
+            lngrd_Function *function;
+            char *bytes;
+            size_t length;
+
+            function = (lngrd_Function *) value->data;
+            length = function->source->length;
+            bytes = (char *) allocate(length, sizeof(char));
+            memcpy(bytes, function->source->bytes, length);
+            string = create_string(bytes, length);
+
+            break;
+        }
+
+        default:
+            crash_with_message("unsupported branch");
+    }
+
+    set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, string, 0), executer);
+}
+
 static void do_deserialize_work(lngrd_Executer *executer, lngrd_List *arguments, lngrd_UInt capacity)
 {
     lngrd_Block *code, *value;
@@ -3353,6 +3665,67 @@ static int string_to_number(const lngrd_String *string, lngrd_Number **result)
     {
         (*result)->value *= -1;
     }
+
+    return 1;
+}
+
+static int number_to_string(const lngrd_Number *number, lngrd_String **result)
+{
+    lngrd_SInt whole;
+    lngrd_String *string;
+    size_t length, index;
+    char *bytes;
+
+    if (number->layout != LNGRD_NUMBER_LAYOUT_32_0)
+    {
+        return 0;
+    }
+
+    whole = number->value;
+
+    if (whole < 0)
+    {
+        whole *= -1;
+    }
+
+    for (length = 0; whole > 0 || length == 0; length++)
+    {
+        whole /= 10;
+    }
+
+    whole = number->value;
+
+    if (whole < 0)
+    {
+        length += 1;
+    }
+
+    bytes = (char *) allocate(length, sizeof(char));
+    string = create_string(bytes, length);
+    index = length - 1;
+
+    if (whole < 0)
+    {
+        bytes[0] = '-';
+        whole *= -1;
+    }
+
+    if (whole == 0)
+    {
+        bytes[index] = '0';
+    }
+
+    while (whole > 0)
+    {
+        lngrd_SInt next, digit;
+
+        next = whole / 10;
+        digit = whole - (next * 10);
+        bytes[index--] = '0' + digit;
+        whole = next;
+    }
+
+    (*result) = string;
 
     return 1;
 }

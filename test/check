@@ -577,5 +577,56 @@ test_code 'if (@equals @query <(@query argument 1)>) (@write "/dev/stdout" "x")'
 test_code 'if (@equals @exit <(@exit argument 1)>) (@write "/dev/stdout" "x")' 'x' 0
 test_code 'if (@equals @deserialize <(@deserialize argument 1)>) (@write "/dev/stdout" "x")' 'x' 0
 test_code 'if (@equals @type <(@type argument 1)>) (@write "/dev/stdout" "x")' 'x' 0
+test_code '(@write "/dev/stdout" (@serialize 0))' '0' 0
+test_code '(@write "/dev/stdout" (@serialize 1))' '1' 0
+test_code '(@write "/dev/stdout" (@serialize -1))' '-1' 0
+test_code '(@write "/dev/stdout" (@serialize +1))' '1' 0
+test_code '(@write "/dev/stdout" (@serialize 100))' '100' 0
+test_code '(@write "/dev/stdout" (@serialize -100))' '-100' 0
+test_code '(@write "/dev/stdout" (@serialize +100))' '100' 0
+test_code '(@write "/dev/stdout" (@serialize 2147483647))' '2147483647' 0
+test_code '(@write "/dev/stdout" (@serialize -2147483647))' '-2147483647' 0
+test_code '(@write "/dev/stdout" (@serialize +2147483647))' '2147483647' 0
+test_code '(@write "/dev/stdout" (@serialize 000000000000000000000000000000000000000000000000002147483647))' '2147483647' 0
+test_code '(@write "/dev/stdout" (@serialize ""))' '""' 0
+test_code '(@write "/dev/stdout" (@serialize "x"))' '"x"' 0
+test_code '(@write "/dev/stdout" (@serialize "text"))' '"text"' 0
+test_code '(@write "/dev/stdout" (@serialize "\n"))' '"\n"' 0
+test_code '(@write "/dev/stdout" (@serialize "\\\"\t\r\n"))' '"\\\"\t\r\n"' 0
+test_code '(@write "/dev/stdout" (@serialize "\xff"))' '"\xff"' 0
+test_code '(@write "/dev/stdout" (@serialize "\x00\x1f\x7f\xff"))' '"\x00\x1f\x7f\xff"' 0
+test_code '(@write "/dev/stdout" (@serialize <>))' '<>' 0
+test_code '(@write "/dev/stdout" (@serialize < >))' '< >' 0
+test_code '(@write "/dev/stdout" (@serialize <(@merge "a" "b")>))' '<(@merge "a" "b")>' 0
+test_code '(@write "/dev/stdout" (@serialize <
+  # make strings more exciting!
+  (@merge argument 1 "!")
+>))' '<
+  # make strings more exciting!
+  (@merge argument 1 "!")
+>' 0
+test_code '(@write "/dev/stdout" (@serialize @add))' '<(@add argument 1 argument 2)>' 0
+test_code '(@write "/dev/stdout" (@serialize @subtract))' '<(@subtract argument 1 argument 2)>' 0
+test_code '(@write "/dev/stdout" (@serialize @multiply))' '<(@multiply argument 1 argument 2)>' 0
+test_code '(@write "/dev/stdout" (@serialize @divide))' '<(@divide argument 1 argument 2)>' 0
+test_code '(@write "/dev/stdout" (@serialize @modulo))' '<(@modulo argument 1 argument 2)>' 0
+test_code '(@write "/dev/stdout" (@serialize @increment))' '<(@increment argument 1)>' 0
+test_code '(@write "/dev/stdout" (@serialize @decrement))' '<(@decrement argument 1)>' 0
+test_code '(@write "/dev/stdout" (@serialize @and))' '<(@and argument 1 argument 2)>' 0
+test_code '(@write "/dev/stdout" (@serialize @or))' '<(@or argument 1 argument 2)>' 0
+test_code '(@write "/dev/stdout" (@serialize @not))' '<(@not argument 1)>' 0
+test_code '(@write "/dev/stdout" (@serialize @precedes))' '<(@precedes argument 1 argument 2)>' 0
+test_code '(@write "/dev/stdout" (@serialize @succeeds))' '<(@succeeds argument 1 argument 2)>' 0
+test_code '(@write "/dev/stdout" (@serialize @equals))' '<(@equals argument 1 argument 2)>' 0
+test_code '(@write "/dev/stdout" (@serialize @length))' '<(@length argument 1)>' 0
+test_code '(@write "/dev/stdout" (@serialize @slice))' '<(@slice argument 1 argument 2 argument 3)>' 0
+test_code '(@write "/dev/stdout" (@serialize @merge))' '<(@merge argument 1 argument 2)>' 0
+test_code '(@write "/dev/stdout" (@serialize @read))' '<(@read argument 1 argument 2)>' 0
+test_code '(@write "/dev/stdout" (@serialize @write))' '<(@write argument 1 argument 2)>' 0
+test_code '(@write "/dev/stdout" (@serialize @delete))' '<(@delete argument 1)>' 0
+test_code '(@write "/dev/stdout" (@serialize @query))' '<(@query argument 1)>' 0
+test_code '(@write "/dev/stdout" (@serialize @exit))' '<(@exit argument 1)>' 0
+test_code '(@write "/dev/stdout" (@serialize @deserialize))' '<(@deserialize argument 1)>' 0
+test_code '(@write "/dev/stdout" (@serialize @type))' '<(@type argument 1)>' 0
 
 write_status 'PASS' 32
