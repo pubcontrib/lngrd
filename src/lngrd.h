@@ -698,11 +698,8 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
                     lngrd_Block *block;
                     lngrd_Number *number;
 
-                    number = create_number(LNGRD_NUMBER_LAYOUT_32_0, 0);
-
                     if (!string_to_number(&tokenValue, &number))
                     {
-                        destroy_number(number);
                         parser->errored = 1;
                         return;
                     }
@@ -3615,6 +3612,7 @@ static lngrd_Number *create_number(lngrd_NumberLayout layout, lngrd_SInt value)
 static int string_to_number(const lngrd_String *string, lngrd_Number **result)
 {
     static lngrd_UInt ten_to[] = {1UL, 10UL, 100UL, 1000UL, 10000UL, 100000UL, 1000000UL, 10000000UL, 100000000UL, 1000000000UL};
+    lngrd_SInt value;
     lngrd_UInt numeric;
     int negative;
     size_t index, place;
@@ -3658,13 +3656,14 @@ static int string_to_number(const lngrd_String *string, lngrd_Number **result)
         }
     }
 
-    (*result)->layout = LNGRD_NUMBER_LAYOUT_32_0;
-    (*result)->value = (lngrd_SInt) numeric;
+    value = numeric;
 
     if (negative)
     {
-        (*result)->value *= -1;
+        value *= -1;
     }
+
+    (*result) = create_number(LNGRD_NUMBER_LAYOUT_32_0, value);
 
     return 1;
 }
