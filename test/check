@@ -1,632 +1,674 @@
-#!/bin/sh
-PROGRAM=$1
+#!/usr/local/bin/lngrd
 
-write_status()
-{
-    status=$1
-    color=$2
+2 |@stderr
+1 |@color
+catch
+\
+  if (@query "NO_COLOR")
+  \
+    0 |@color
+  /
+/
 
-    if [ -z "$NO_COLOR" ]
-    then
-        printf '\033[7;%dm %s \033[0m\n' $color "$status" 1>&2
-    else
-        printf '[%s]\n' "$status" 1>&2
-    fi
-}
+<
+  argument 1 |$status
+  argument 2 |$color
 
-write_detail()
-{
-    header=$1
-    value=$2
+  if @color
+  \
+    (@write @stderr "\x1b[7;")
+    (@write @stderr (@serialize $color))
+    (@write @stderr "m ")
+    (@write @stderr $status)
+    (@write @stderr " \x1b[0m\n")
+  /
+  if (@not @color)
+  \
+    (@write @stderr "[")
+    (@write @stderr $status)
+    (@write @stderr "]\n")
+  /
+> |@writeStatus
 
-    if [ -z "$NO_COLOR" ]
-    then
-        printf '\033[1m%s:\033[0m\n%s\n' "$header" "$value" 1>&2
-    else
-        printf '%s:\n%s\n' "$header" "$value" 1>&2
-    fi
-}
+<
+  argument 1 |$header
+  argument 2 |$value
 
-test_code()
-{
-    source=$1
-    expected_output=$2
-    expected_exit=$3
+  if @color
+  \
+    (@write @stderr "\x1b[1m")
+    (@write @stderr $header)
+    (@write @stderr ":\x1b[0m\n")
+    (@write @stderr $value)
+    (@write @stderr "\n")
+  /
+  if (@not @color)
+  \
+    (@write @stderr $header)
+    (@write @stderr ":\n")
+    (@write @stderr $value)
+    (@write @stderr "\n")
+  /
+> |@writeDetail
 
-    actual_output=`$PROGRAM -t -- "$source"`
-    actual_exit=$?
+<
+  argument 1 |$do
+  argument 2 |$expected
 
-    if [ "$actual_exit" != "$expected_exit" ]
-    then
-        write_status 'FAIL' 31
-        write_detail 'Reason' 'an unexpected exit code was returned'
-        write_detail 'Source' "$source"
-        write_detail 'Actual' "$actual_exit"
-        write_detail 'Expected' "$expected_exit"
+  catch \ ($do) |$returned / |$thrown
 
-        exit 1
-    fi
+  if $thrown
+  \
+    (@writeStatus "FAIL" 31)
+    (@writeDetail "Reason" "an unexpected error was thrown")
+    (@writeDetail "Thrown" (@serialize $thrown))
+    (@writeDetail "Source" (@serialize $do))
+    (@exit 1)
+  /
 
-    if [ "$actual_output" != "$expected_output" ]
-    then
-        write_status 'FAIL' 31
-        write_detail 'Reason' 'an unexpected output was returned'
-        write_detail 'Source' "$source"
-        write_detail 'Actual' "$actual_output"
-        write_detail 'Expected' "$expected_output"
+  if (@not (@equals $returned $expected))
+  \
+    (@writeStatus "FAIL" 31)
+    (@writeDetail "Reason" "an unexpected value was returned")
+    (@writeDetail "Actual" (@serialize $returned))
+    (@writeDetail "Expected" (@serialize $expected))
+    (@writeDetail "Source" (@serialize $do))
+    (@exit 1)
+  /
+> |@returns
 
-        exit 1
-    fi
-}
+<
+  argument 1 |$do
+  argument 2 |$expected
 
-test_code '' '' 0
-test_code ' ' '' 0
-test_code '
-' '' 0
-test_code '#comment' '' 0
-test_code '""' '' 0
-test_code '"text"' '' 0
-test_code '@write' '' 0
-test_code '(@write "/dev/stdout" "")' '' 0
-test_code '(@write "/dev/stdout" "text")' 'text' 0
-test_code '(@write "/dev/stdout" "1") (@write "/dev/stdout" "2") (@write "/dev/stdout" "3")' '123' 0
-test_code '(@write "/dev/stdout" (@write "/dev/stdout" "text"))' 'text' 0
-test_code '(@write"/dev/stdout""text")' 'text' 0
-test_code '(@write)' '' 1
-test_code '(@write "/dev/stdout")' '' 1
-test_code '(@write @write @write)' '' 1
-test_code '(@write "/dev/stdout" "1") @invalid (@write "/dev/stdout" "2")' '1' 1
-test_code '(@write "/dev/stdout" "text" "extra")' 'text' 0
-test_code '(@write "/dev/stdout" "text" @invalid)' '' 1
-test_code '@' '' 1
-test_code '|' '' 1
-test_code '@|' '' 1
-test_code '|@' '' 1
-test_code '"text" |@variable (@write "/dev/stdout" @variable)' 'text' 0
-test_code '"text" |@variable |@clone (@write "/dev/stdout" @clone)' 'text' 0
-test_code '"text" |@variable |@variable (@write "/dev/stdout" @variable)' 'text' 0
-test_code '@write |@w (@w "/dev/stdout" "text")' 'text' 0
-test_code '"text" |@write' '' 0
-test_code '"|@variable' '' 1
-test_code 'if "0" (@write "/dev/stdout" "pass")' 'pass' 0
-test_code 'if "1" (@write "/dev/stdout" "pass")' 'pass' 0
-test_code 'if "x" (@write "/dev/stdout" "pass")' 'pass' 0
-test_code 'if @write (@write "/dev/stdout" "pass")' 'pass' 0
-test_code 'if "" (@write "/dev/stdout" "pass")' '' 0
-test_code 'if "1" if "2" (@write "/dev/stdout" "pass")' 'pass' 0
-test_code 'if "1" if "" (@write "/dev/stdout" "pass")' '' 0
-test_code 'if "" if "" (@write "/dev/stdout" "pass")' '' 0
-test_code '(@write "/dev/stdout" if "" "pass")' '' 0
-test_code '(@write "/dev/stdout" if "x" "pass")' 'pass' 0
-test_code 'if' '' 1
-test_code 'if ""' '' 1
-test_code 'junk' '' 1
-test_code '\ /' '' 0
-test_code '\ (@write "/dev/stdout" "1") /' '1' 0
-test_code '\ (@write "/dev/stdout" "1") (@write "/dev/stdout" "2") (@write "/dev/stdout" "3") /' '123' 0
-test_code '(@write "/dev/stdout" \ "1" "2" "3" /)' '3' 0
-test_code '\' '' 1
-test_code '/' '' 1
-test_code '/ "1"' '' 1
-test_code 'while "" \/' '' 0
-test_code '"x" |@test while @test \ (@write "/dev/stdout" ".") "" |@test /' '.' 0
-test_code '"" |@1 "" |@2 "x" |@3 "x" |@t while @t \ (@write "/dev/stdout" ".") if @1 \ "" |@t / if @2 \ "x" |@1 / if @3 \ "x" |@2 / /' '...' 0
-test_code '(@write "/dev/stdout" \ while "" \/ /)' '' 0
-test_code '"x" |@test (@write "/dev/stdout" \ while @test \ "" |@test "." / /)' '' 0
-test_code 'while' '' 1
-test_code 'while ""' '' 1
-test_code 'catch @missing' '' 0
-test_code '(@write "/dev/stdout" \ catch \ @missing / /)' 'absent variable' 0
-test_code '(@write "/dev/stdout" \ catch \ "text" / /)' '' 0
-test_code '(@write "/dev/stdout" \ catch \ / /)' '' 0
-test_code 'catch' '' 1
-test_code 'throw "error"' '' 1
-test_code '(@write "/dev/stdout" \ catch \ throw "error" / /)' 'error' 0
-test_code '(\ catch \ throw @write / / "/dev/stdout" "text")' 'text' 0
-test_code 'throw throw "error"' '' 1
-test_code 'throw' '' 1
-test_code '"text" |@variable %@variable (@write "/dev/stdout" \ catch \ @variable / /)' 'absent variable' 0
-test_code '%@variable (@write "/dev/stdout" \ catch \ @variable / /)' 'absent variable' 0
-test_code '"0" |@0 "1" |@1 "2" |@2 %@0 (@write "/dev/stdout" @1) (@write "/dev/stdout" @2)' '12' 0
-test_code '"0" |@0 "1" |@1 "2" |@2 %@1 (@write "/dev/stdout" @0) (@write "/dev/stdout" @2)' '02' 0
-test_code '"0" |@0 "1" |@1 "2" |@2 %@2 (@write "/dev/stdout" @0) (@write "/dev/stdout" @1)' '01' 0
-test_code '"0" |@0 "1" |@1 "2" |@2 %@0 %@1 (@write "/dev/stdout" @2)' '2' 0
-test_code '"0" |@0 "1" |@1 "2" |@2 %@1 %@0 (@write "/dev/stdout" @2)' '2' 0
-test_code '"0" |@0 "4" |@4 "8" |@8 %@0 (@write "/dev/stdout" @4) (@write "/dev/stdout" @8)' '48' 0
-test_code '"0" |@0 "4" |@4 "8" |@8 %@4 (@write "/dev/stdout" @0) (@write "/dev/stdout" @8)' '08' 0
-test_code '"0" |@0 "4" |@4 "8" |@8 %@8 (@write "/dev/stdout" @0) (@write "/dev/stdout" @4)' '04' 0
-test_code '"0" |@0 "4" |@4 "8" |@8 %@0 %@4 (@write "/dev/stdout" @8)' '8' 0
-test_code '"0" |@0 "4" |@4 "8" |@8 %@4 %@0 (@write "/dev/stdout" @8)' '8' 0
-test_code '"0" |@0 "8" |@8 "32" |@32 %@0 (@write "/dev/stdout" @8) (@write "/dev/stdout" @32)' '832' 0
-test_code '"0" |@0 "8" |@8 "32" |@32 %@8 (@write "/dev/stdout" @0) (@write "/dev/stdout" @32)' '032' 0
-test_code '"0" |@0 "8" |@8 "32" |@32 %@32 (@write "/dev/stdout" @0) (@write "/dev/stdout" @8)' '08' 0
-test_code '"0" |@0 "8" |@8 "32" |@32 %@0 %@8 (@write "/dev/stdout" @32)' '32' 0
-test_code '"0" |@0 "8" |@8 "32" |@32 %@8 %@0 (@write "/dev/stdout" @32)' '32' 0
-test_code '"x" |@0 |@1 |@2 |@3 |@4 |@5 |@6 |@7 |@8 |@9 (@write "/dev/stdout" @0) (@write "/dev/stdout" @9)' 'xx' 0
-test_code '"x" |@0 |@0 |@0 |@0 |@0 |@0 |@0 |@0 |@0 |@0 (@write "/dev/stdout" @0)' 'x' 0
-test_code '"0" |@0 "1" |@1 "2" |@2 "3" |@3 "4" |@4 "5" |@5 "6" |@6 "7" |@7 "8" |@8 "9" |@9 (@write "/dev/stdout" @0) (@write "/dev/stdout" @9)' '09' 0
-test_code '0' '' 0
-test_code '1' '' 0
-test_code '-1' '' 0
-test_code '+1' '' 0
-test_code '100' '' 0
-test_code '-100' '' 0
-test_code '+100' '' 0
-test_code '2147483647' '' 0
-test_code '-2147483647' '' 0
-test_code '+2147483647' '' 0
-test_code '000000000000000000000000000000000000000000000000002147483647' '' 0
-test_code '2147483648' '' 1
-test_code '-2147483648' '' 1
-test_code '+2147483648' '' 1
-test_code '--100' '' 1
-test_code '++100' '' 1
-test_code '(@write "/dev/stdout" if 1 "pass")' 'pass' 0
-test_code '(@write "/dev/stdout" if -1 "pass")' 'pass' 0
-test_code '(@write "/dev/stdout" if 100 "pass")' 'pass' 0
-test_code '(@write "/dev/stdout" if -100 "pass")' 'pass' 0
-test_code '1 |@1' '' 0
-test_code '(@write "/dev/stdout" 1)' '' 1
-test_code '(@write "/dev/stdout" catch \ (@write "/dev/stdout" 1) /)' 'alien argument' 0
-test_code '(@write "/dev/stdout" if 0 "pass")' '' 0
-test_code 'if (@add 0 0) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@add 0 1) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@add -1 1) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@add 2147483647 0) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@add -2147483647 0) (@write "/dev/stdout" "x")' 'x' 0
-test_code '(@write "/dev/stdout" catch \ (@add 2147483647 1) /)' 'arithmetic error' 0
-test_code '(@write "/dev/stdout" catch \ (@add 1 2147483647) /)' 'arithmetic error' 0
-test_code '(@write "/dev/stdout" catch \ (@add 2147483647 2147483647) /)' 'arithmetic error' 0
-test_code '(@write "/dev/stdout" catch \ (@add -2147483647 -1) /)' 'arithmetic error' 0
-test_code '(@write "/dev/stdout" catch \ (@add -1 -2147483647) /)' 'arithmetic error' 0
-test_code '(@write "/dev/stdout" catch \ (@add -2147483647 -2147483647) /)' 'arithmetic error' 0
-test_code '(@write "/dev/stdout" catch \ (@add) /)' 'absent argument' 0
-test_code '(@write "/dev/stdout" catch \ (@add 0) /)' 'absent argument' 0
-test_code '(@write "/dev/stdout" catch \ (@add "" 0) /)' 'alien argument' 0
-test_code '(@write "/dev/stdout" catch \ (@add 0 "") /)' 'alien argument' 0
-test_code '(@write "/dev/stdout" catch \ (@add @write 0) /)' 'alien argument' 0
-test_code '(@write "/dev/stdout" catch \ (@add 0 @write) /)' 'alien argument' 0
-test_code 'if (@subtract 0 0) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@subtract 0 -1) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@subtract -1 -1) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@subtract 2147483647 0) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@subtract -2147483647 0) (@write "/dev/stdout" "x")' 'x' 0
-test_code '(@write "/dev/stdout" catch \ (@subtract 2147483647 -1) /)' 'arithmetic error' 0
-test_code '(@write "/dev/stdout" catch \ (@subtract -1 2147483647) /)' 'arithmetic error' 0
-test_code '(@write "/dev/stdout" catch \ (@subtract 2147483647 -2147483647) /)' 'arithmetic error' 0
-test_code '(@write "/dev/stdout" catch \ (@subtract -2147483647 1) /)' 'arithmetic error' 0
-test_code '(@write "/dev/stdout" catch \ (@subtract 1 -2147483647) /)' 'arithmetic error' 0
-test_code '(@write "/dev/stdout" catch \ (@subtract -2147483647 2147483647) /)' 'arithmetic error' 0
-test_code '(@write "/dev/stdout" catch \ (@subtract) /)' 'absent argument' 0
-test_code '(@write "/dev/stdout" catch \ (@subtract 0) /)' 'absent argument' 0
-test_code '(@write "/dev/stdout" catch \ (@subtract "" 0) /)' 'alien argument' 0
-test_code '(@write "/dev/stdout" catch \ (@subtract 0 "") /)' 'alien argument' 0
-test_code '(@write "/dev/stdout" catch \ (@subtract @write 0) /)' 'alien argument' 0
-test_code '(@write "/dev/stdout" catch \ (@subtract 0 @write) /)' 'alien argument' 0
-test_code 'if (@multiply 0 0) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@multiply 1 1) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@multiply 1 0) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@multiply 2147483647 1) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@multiply -2147483647 1) (@write "/dev/stdout" "x")' 'x' 0
-test_code '(@write "/dev/stdout" catch \ (@multiply 2147483647 2) /)' 'arithmetic error' 0
-test_code '(@write "/dev/stdout" catch \ (@multiply 2147483647 -2) /)' 'arithmetic error' 0
-test_code '(@write "/dev/stdout" catch \ (@multiply -2147483647 2) /)' 'arithmetic error' 0
-test_code '(@write "/dev/stdout" catch \ (@multiply -2147483647 -2) /)' 'arithmetic error' 0
-test_code '(@write "/dev/stdout" catch \ (@multiply 2 2147483647) /)' 'arithmetic error' 0
-test_code '(@write "/dev/stdout" catch \ (@multiply 2 -2147483647) /)' 'arithmetic error' 0
-test_code '(@write "/dev/stdout" catch \ (@multiply -2 2147483647) /)' 'arithmetic error' 0
-test_code '(@write "/dev/stdout" catch \ (@multiply -2 -2147483647) /)' 'arithmetic error' 0
-test_code '(@write "/dev/stdout" catch \ (@multiply 2147483647 2147483647) /)' 'arithmetic error' 0
-test_code '(@write "/dev/stdout" catch \ (@multiply 2147483647 -2147483647) /)' 'arithmetic error' 0
-test_code '(@write "/dev/stdout" catch \ (@multiply -2147483647 2147483647) /)' 'arithmetic error' 0
-test_code '(@write "/dev/stdout" catch \ (@multiply -2147483647 -2147483647) /)' 'arithmetic error' 0
-test_code '(@write "/dev/stdout" catch \ (@multiply) /)' 'absent argument' 0
-test_code '(@write "/dev/stdout" catch \ (@multiply 0) /)' 'absent argument' 0
-test_code '(@write "/dev/stdout" catch \ (@multiply "" 0) /)' 'alien argument' 0
-test_code '(@write "/dev/stdout" catch \ (@multiply 0 "") /)' 'alien argument' 0
-test_code '(@write "/dev/stdout" catch \ (@multiply @write 0) /)' 'alien argument' 0
-test_code '(@write "/dev/stdout" catch \ (@multiply 0 @write) /)' 'alien argument' 0
-test_code 'if (@divide 0 1) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@divide 1 1) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@divide 1 4) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@divide 2147483647 1) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@divide -2147483647 1) (@write "/dev/stdout" "x")' 'x' 0
-test_code '(@divide 2147483647 2147483647)' '' 0
-test_code '(@divide 2147483647 -2147483647)' '' 0
-test_code '(@divide -2147483647 2147483647)' '' 0
-test_code '(@divide -2147483647 -2147483647)' '' 0
-test_code '(@write "/dev/stdout" catch \ (@divide 1 0) /)' 'arithmetic error' 0
-test_code '(@write "/dev/stdout" catch \ (@divide -1 0) /)' 'arithmetic error' 0
-test_code '(@write "/dev/stdout" catch \ (@divide) /)' 'absent argument' 0
-test_code '(@write "/dev/stdout" catch \ (@divide 0) /)' 'absent argument' 0
-test_code '(@write "/dev/stdout" catch \ (@divide "" 0) /)' 'alien argument' 0
-test_code '(@write "/dev/stdout" catch \ (@divide 0 "") /)' 'alien argument' 0
-test_code '(@write "/dev/stdout" catch \ (@divide @write 0) /)' 'alien argument' 0
-test_code '(@write "/dev/stdout" catch \ (@divide 0 @write) /)' 'alien argument' 0
-test_code 'if (@modulo 1 1) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@modulo 5 2) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@modulo 0 1) (@write "/dev/stdout" "x")' '' 0
-test_code '(@modulo 2147483647 2147483647)' '' 0
-test_code '(@modulo 2147483647 -2147483647)' '' 0
-test_code '(@modulo -2147483647 2147483647)' '' 0
-test_code '(@modulo -2147483647 -2147483647)' '' 0
-test_code '(@write "/dev/stdout" catch \ (@modulo 1 0) /)' 'arithmetic error' 0
-test_code '(@write "/dev/stdout" catch \ (@modulo -1 0) /)' 'arithmetic error' 0
-test_code '(@write "/dev/stdout" catch \ (@modulo) /)' 'absent argument' 0
-test_code '(@write "/dev/stdout" catch \ (@modulo 0) /)' 'absent argument' 0
-test_code '(@write "/dev/stdout" catch \ (@modulo "" 0) /)' 'alien argument' 0
-test_code '(@write "/dev/stdout" catch \ (@modulo 0 "") /)' 'alien argument' 0
-test_code '(@write "/dev/stdout" catch \ (@modulo @write 0) /)' 'alien argument' 0
-test_code '(@write "/dev/stdout" catch \ (@modulo 0 @write) /)' 'alien argument' 0
-test_code 'if (@increment -1) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@increment 0) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@increment 2147483646) (@write "/dev/stdout" "x")' 'x' 0
-test_code '(@write "/dev/stdout" catch \ (@increment 2147483647) /)' 'arithmetic error' 0
-test_code '(@write "/dev/stdout" catch \ (@increment) /)' 'absent argument' 0
-test_code '(@write "/dev/stdout" catch \ (@increment "") /)' 'alien argument' 0
-test_code '(@write "/dev/stdout" catch \ (@increment @write) /)' 'alien argument' 0
-test_code 'if (@decrement 1) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@decrement 0) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@decrement -2147483646) (@write "/dev/stdout" "x")' 'x' 0
-test_code '(@write "/dev/stdout" catch \ (@decrement -2147483647) /)' 'arithmetic error' 0
-test_code '(@write "/dev/stdout" catch \ (@decrement) /)' 'absent argument' 0
-test_code '(@write "/dev/stdout" catch \ (@decrement "") /)' 'alien argument' 0
-test_code '(@write "/dev/stdout" catch \ (@decrement @write) /)' 'alien argument' 0
-test_code 'if (@and 0 0) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@and 0 1) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@and 1 0) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@and 1 1) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@and "" "") (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@and "" "x") (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@and "x" "") (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@and "x" "x") (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@and 1 "x") (@write "/dev/stdout" "x")' 'x' 0
-test_code '(@write "/dev/stdout" catch \ (@and) /)' 'absent argument' 0
-test_code '(@write "/dev/stdout" catch \ (@and 0) /)' 'absent argument' 0
-test_code '(@write "/dev/stdout" catch \ (@and "") /)' 'absent argument' 0
-test_code 'if (@or 0 0) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@or 0 1) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@or 1 0) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@or 1 1) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@or "" "") (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@or "" "x") (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@or "x" "") (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@or "x" "x") (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@or 1 "x") (@write "/dev/stdout" "x")' 'x' 0
-test_code '(@write "/dev/stdout" catch \ (@or) /)' 'absent argument' 0
-test_code '(@write "/dev/stdout" catch \ (@or 0) /)' 'absent argument' 0
-test_code '(@write "/dev/stdout" catch \ (@or "") /)' 'absent argument' 0
-test_code 'if (@not 0) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@not 1) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@not "") (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@not "x") (@write "/dev/stdout" "x")' '' 0
-test_code '(@write "/dev/stdout" catch \ (@not) /)' 'absent argument' 0
-test_code 'if (@precedes 0 100) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@precedes 100 0) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@precedes 100 100) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@precedes 0 -100) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@precedes -100 0) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@precedes -100 -100) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@precedes "a" "b") (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@precedes "b" "a") (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@precedes "a" "a") (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@precedes "A" "a") (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@precedes "a" "A") (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@precedes "A" "A") (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@precedes @add @subtract) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@precedes @subtract @add) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@precedes @add @add) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@precedes <(@merge "a" "b")> <(@merge "b" "a")>) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@precedes <(@merge "b" "a")> <(@merge "a" "b")>) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@precedes <(@merge "a" "b")> <(@merge "a" "b")>) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@precedes @add <(@add argument 1 argument 2)>) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@precedes <(@add argument 1 argument 2)> @add) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@precedes 100 "100") (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@precedes 100 @add) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@precedes "100" 100) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@precedes "100" @add) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@precedes @add 100) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@precedes @add "100") (@write "/dev/stdout" "x")' '' 0
-test_code '(@write "/dev/stdout" catch \ (@precedes) /)' 'absent argument' 0
-test_code '(@write "/dev/stdout" catch \ (@precedes 0) /)' 'absent argument' 0
-test_code '(@write "/dev/stdout" catch \ (@precedes "") /)' 'absent argument' 0
-test_code 'if (@succeeds 0 100) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@succeeds 100 0) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@succeeds 100 100) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@succeeds 0 -100) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@succeeds -100 0) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@succeeds -100 -100) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@succeeds "a" "b") (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@succeeds "b" "a") (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@succeeds "a" "a") (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@succeeds "A" "a") (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@succeeds "a" "A") (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@succeeds "A" "A") (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@succeeds @add @subtract) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@succeeds @subtract @add) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@succeeds @add @add) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@succeeds <(@merge "a" "b")> <(@merge "b" "a")>) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@succeeds <(@merge "b" "a")> <(@merge "a" "b")>) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@succeeds <(@merge "a" "b")> <(@merge "a" "b")>) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@succeeds @add <(@add argument 1 argument 2)>) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@succeeds <(@add argument 1 argument 2)> @add) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@succeeds 100 "100") (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@succeeds 100 @add) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@succeeds "100" 100) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@succeeds "100" @add) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@succeeds @add 100) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@succeeds @add "100") (@write "/dev/stdout" "x")' 'x' 0
-test_code '(@write "/dev/stdout" catch \ (@succeeds) /)' 'absent argument' 0
-test_code '(@write "/dev/stdout" catch \ (@succeeds 0) /)' 'absent argument' 0
-test_code '(@write "/dev/stdout" catch \ (@succeeds "") /)' 'absent argument' 0
-test_code 'if (@equals 0 100) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@equals 100 0) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@equals 100 100) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@equals 0 -100) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@equals -100 0) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@equals -100 -100) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@equals "a" "b") (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@equals "b" "a") (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@equals "a" "a") (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@equals "A" "a") (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@equals "a" "A") (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@equals "A" "A") (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@equals @add @subtract) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@equals @subtract @add) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@equals @add @add) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@equals <(@merge "a" "b")> <(@merge "b" "a")>) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@equals <(@merge "b" "a")> <(@merge "a" "b")>) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@equals <(@merge "a" "b")> <(@merge "a" "b")>) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@equals @add <(@add argument 1 argument 2)>) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@equals <(@add argument 1 argument 2)> @add) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@equals 100 "100") (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@equals 100 @add) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@equals "100" 100) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@equals "100" @add) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@equals @add 100) (@write "/dev/stdout" "x")' '' 0
-test_code 'if (@equals @add "100") (@write "/dev/stdout" "x")' '' 0
-test_code '(@write "/dev/stdout" catch \ (@equals) /)' 'absent argument' 0
-test_code '(@write "/dev/stdout" catch \ (@equals 0) /)' 'absent argument' 0
-test_code '(@write "/dev/stdout" catch \ (@equals "") /)' 'absent argument' 0
-test_code '(@write, "/dev/stdout", "text")' 'text' 0
-test_code '(@write,"/dev/stdout","text")' 'text' 0
-test_code 'if,"x",(@write,"/dev/stdout","x")' 'x' 0
-test_code 'if (@equals \1,2,3/ 3) (@write "/dev/stdout" "3")' '3' 0
-test_code 'if (@equals (@length "") 0) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@equals (@length "1") 1) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@equals (@length " ") 1) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@equals (@length "123") 3) (@write "/dev/stdout" "x")' 'x' 0
-test_code '(@write "/dev/stdout" catch \ (@length 0) /)' 'alien argument' 0
-test_code '(@write "/dev/stdout" catch \ (@length @length) /)' 'alien argument' 0
-test_code '(@write "/dev/stdout" catch \ (@length) /)' 'absent argument' 0
-test_code '(@write "/dev/stdout" (@merge "" ""))' '' 0
-test_code '(@write "/dev/stdout" (@merge "l" ""))' 'l' 0
-test_code '(@write "/dev/stdout" (@merge "" "r"))' 'r' 0
-test_code '(@write "/dev/stdout" (@merge "l" "r"))' 'lr' 0
-test_code '(@write "/dev/stdout" (@merge "ll" "rrrr"))' 'llrrrr' 0
-test_code '(@write "/dev/stdout" catch \ (@merge 0 "") /)' 'alien argument' 0
-test_code '(@write "/dev/stdout" catch \ (@merge "" 0) /)' 'alien argument' 0
-test_code '(@write "/dev/stdout" catch \ (@merge @merge "") /)' 'alien argument' 0
-test_code '(@write "/dev/stdout" catch \ (@merge "" @merge) /)' 'alien argument' 0
-test_code '(@write "/dev/stdout" catch \ (@merge) /)' 'absent argument' 0
-test_code '(@write "/dev/stdout" catch \ (@merge "") /)' 'absent argument' 0
-test_code '(@write "/dev/stdout" (@slice "" 1 1))' '' 0
-test_code '(@write "/dev/stdout" (@slice "x" 1 1))' 'x' 0
-test_code '(@write "/dev/stdout" (@slice "123" 1 1))' '1' 0
-test_code '(@write "/dev/stdout" (@slice "123" 2 2))' '2' 0
-test_code '(@write "/dev/stdout" (@slice "123" 3 3))' '3' 0
-test_code '(@write "/dev/stdout" (@slice "123" 1 3))' '123' 0
-test_code '(@write "/dev/stdout" (@slice "123" 0 3))' '123' 0
-test_code '(@write "/dev/stdout" (@slice "123" 1 4))' '123' 0
-test_code '(@write "/dev/stdout" (@slice "123" 3 1))' '123' 0
-test_code '(@write "/dev/stdout" (@slice "123" 3 0))' '123' 0
-test_code '(@write "/dev/stdout" (@slice "123" 4 1))' '123' 0
-test_code '(@write "/dev/stdout" catch \ (@slice 0 0 0) /)' 'alien argument' 0
-test_code '(@write "/dev/stdout" catch \ (@slice @slice 0 0) /)' 'alien argument' 0
-test_code '(@write "/dev/stdout" catch \ (@slice "" "" 0) /)' 'alien argument' 0
-test_code '(@write "/dev/stdout" catch \ (@slice "" @slice 0) /)' 'alien argument' 0
-test_code '(@write "/dev/stdout" catch \ (@slice "" 0 "") /)' 'alien argument' 0
-test_code '(@write "/dev/stdout" catch \ (@slice "" 0 @slice) /)' 'alien argument' 0
-test_code '(@write "/dev/stdout" catch \ (@slice) /)' 'absent argument' 0
-test_code '(@write "/dev/stdout" catch \ (@slice "") /)' 'absent argument' 0
-test_code '(@write "/dev/stdout" catch \ (@slice "" 0) /)' 'absent argument' 0
-test_code 'if (@equals (@length "\\\"\t\r\n") 5) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@equals (@length "\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f") 16) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@equals (@length "\x00\x10\x20\x30\x40\x50\x60\x70\x80\x90\xa0\xb0\xc0\xd0\xe0\xf0") 16) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@equals (@length "\x00\x11\x22\x33\x44\x55\x66\x77\x88\x99\xaa\xbb\xcc\xdd\xee\xff") 16) (@write "/dev/stdout" "x")' 'x' 0
-test_code '(@write "/dev/stdout" "line 1\nline 2\nline 3")' 'line 1
-line 2
-line 3' 0
-test_code '(@write "/dev/stdout" "line 1\x0aline 2\x0aline 3")' 'line 1
-line 2
-line 3' 0
-test_code '(@write "/dev/stdout" "\x74\x65\x78\x74")' 'text' 0
-test_code '(@write "/dev/stdout" "\x7c123\x7c")' '|123|' 0
-test_code '(@write "/dev/stdout" "\x7cabc\x7c")' '|abc|' 0
-test_code '"text" |@"variable" (@write "/dev/stdout" @"variable")' 'text' 0
-test_code '"text" |@"variable" (@write "/dev/stdout" @variable)' 'text' 0
-test_code '"text" |@variable (@write "/dev/stdout" @"variable")' 'text' 0
-test_code '"text" |@"" (@write "/dev/stdout" @"")' 'text' 0
-test_code '"text" |@"\"special\"" (@write "/dev/stdout" @"\"special\"")' 'text' 0
-test_code '"text" |@"\"special\"" %@"\"special\"" (@write "/dev/stdout" catch \ @"\"special\"" /)' 'absent variable' 0
-test_code '"\xFF"' '' 1
-test_code '"\z"' '' 1
-test_code '"\x"' '' 1
-test_code '"\x0"' '' 1
-test_code '"\x0z"' '' 1
-test_code '"\xz0"' '' 1
-test_code '@"\z"' '' 1
-test_code '"text" |@"\z"' '' 1
-test_code '%@"\z"' '' 1
-test_code '(@write "/dev/stdout" (@type 0))' 'number' 0
-test_code '(@write "/dev/stdout" (@type ""))' 'string' 0
-test_code '(@write "/dev/stdout" (@type @type))' 'function' 0
-test_code '(@write "/dev/stdout" catch \ (@type) /)' 'absent argument' 0
-test_code '(@write "/dev/stdout" (@type (@query "TERM")))' 'string' 0
-test_code 'if (@not (@equals (@length (@query "TERM")) 0)) (@write "/dev/stdout" "x")' 'x' 0
-test_code '(@write "/dev/stdout" catch \ (@query "__absent__") /)' 'absent environment variable' 0
-test_code '(@write "/dev/stdout" catch \ (@query 0) /)' 'alien argument' 0
-test_code '(@write "/dev/stdout" catch \ (@query @query) /)' 'alien argument' 0
-test_code '(@write "/dev/stdout" catch \ (@query) /)' 'absent argument' 0
-test_code '(@exit 0)' '' 0
-test_code '(@exit 1)' '' 1
-test_code '(@exit 127)' '' 127
-test_code '(@exit 255)' '' 255
-test_code '(@write "/dev/stdout" catch \ (@exit -1) /)' 'damaged argument' 0
-test_code '(@write "/dev/stdout" catch \ (@exit 256) /)' 'damaged argument' 0
-test_code '(@write "/tmp/lngrd.txt" "text") (@write "/dev/stdout" (@read "/tmp/lngrd.txt" ""))' 'text' 0
-test_code '(@write "/tmp/lngrd.txt" "line 1\nline 2\nline 3") (@write "/dev/stdout" (@read "/tmp/lngrd.txt" "\n"))' 'line 1' 0
-test_code '(@write "/tmp/lngrd.txt" "line 1\nline 2\nline 3") (@write "/dev/stdout" (@read "/tmp/lngrd.txt" ""))' 'line 1
-line 2
-line 3' 0
-test_code '(@write "/dev/stdout" catch \ (@read "/dev/stdin" 0) /)' 'alien argument' 0
-test_code '(@write "/dev/stdout" catch \ (@read "/dev/stdin" @read) /)' 'alien argument' 0
-test_code '(@write "/dev/stdout" catch \ (@read) /)' 'absent argument' 0
-test_code '(@write "/dev/stdout" catch \ (@read "/dev/stdin") /)' 'absent argument' 0
-test_code '(@write "/tmp/lngrd.txt" "text") (@delete "/tmp/lngrd.txt") (@write "/dev/stdout" catch \ (@read "/tmp/lngrd.txt" "") /)' 'absent file' 0
-test_code '(@write "/tmp/lngrd.txt" "text") (@delete "/tmp/lngrd.txt") (@write "/dev/stdout" catch \ (@delete "/tmp/lngrd.txt") /)' 'io error' 0
-test_code '(@write 1 "text")' 'text' 0
-test_code '(@write "/dev/stdout" catch \(@read 1 "") / )' 'io error' 0
-test_code '(@write "/dev/stdout" catch \(@read 2 "") / )' 'io error' 0
-test_code '(@write "/dev/stdout" catch \(@write 0 "text") / )' 'io error' 0
-test_code '(@write "/dev/stdout" catch \(@delete 0) / )' 'io error' 0
-test_code '(@write "/dev/stdout" catch \(@delete 1) / )' 'io error' 0
-test_code '(@write "/dev/stdout" catch \(@delete 2) / )' 'io error' 0
-test_code '(@write "/dev/stdout" catch \(@read 3 "") / )' 'absent file' 0
-test_code '(@write "/dev/stdout" catch \(@write 3 "text") / )' 'absent file' 0
-test_code '(@write "/dev/stdout" catch \(@delete 3) / )' 'io error' 0
-test_code '<>' '' 0
-test_code '<(@write "/dev/stdout" "text")>' '' 0
-test_code '(<(@write "/dev/stdout" "text")>)' 'text' 0
-test_code '<(@write "/dev/stdout" "x")> |@f (@f) (@f) (@f)' 'xxx' 0
-test_code 'if <> (@write "/dev/stdout" "x")' '' 0
-test_code 'if < > (@write "/dev/stdout" "x")' '' 0
-test_code 'if <1> (@write "/dev/stdout" "x")' 'x' 0
-test_code '(catch \ throw <(@write "/dev/stdout" "help")> /)' 'help' 0
-test_code '"text" |$local (@write "/dev/stdout" $local)' 'text' 0
-test_code '"text" |$variable %$variable (@write "/dev/stdout" \ catch \ $variable / /)' 'absent variable' 0
-test_code '0 |$n (<1 |$n>) (<2 |$n>) (<3 |$n>) if (@equals $n 0) (@write "/dev/stdout" "x")' 'x' 0
-test_code '0 |@n (<1 |@n>) (<2 |@n>) (<3 |@n>) if (@equals @n 3) (@write "/dev/stdout" "x")' 'x' 0
-test_code '0 |$n (<> (<1 |$n>) (<2 |$n>) (<3 |$n>)) if (@equals $n 0) (@write "/dev/stdout" "x")' 'x' 0
-test_code '0 |@n (<> (<1 |@n>) (<2 |@n>) (<3 |@n>)) if (@equals @n 3) (@write "/dev/stdout" "x")' 'x' 0
-test_code '0 |$n (<> (<> (<1 |$n>) (<2 |$n>) (<3 |$n>))) if (@equals $n 0) (@write "/dev/stdout" "x")' 'x' 0
-test_code '0 |@n (<> (<> (<1 |@n>) (<2 |@n>) (<3 |@n>))) if (@equals @n 3) (@write "/dev/stdout" "x")' 'x' 0
-test_code '0 |$n <(@add $n 1) |$n> |$f (@write "/dev/stdout" catch \ ($f) /)' 'absent variable' 0
-test_code '0 |@n <(@add @n 1) |@n> |@f (@f) (@f) (@f) if (@equals @n 3) (@write "/dev/stdout" "x")' 'x' 0
-test_code '0 |$n (<(@write "/dev/stdout" catch \ $n /)> (<1 |$n>) (<2 |$n>) (<3 |$n>))' 'absent variable' 0
-test_code '0 |@n (<if (@equals @n 3) (@write "/dev/stdout" "x")> (<1 |@n>) (<2 |@n>) (<3 |@n>))' 'x' 0
-test_code '(<>)' '' 0
-test_code '"x" |@n (<@n |$n (@write "/dev/stdout" $n)>)' 'x' 0
-test_code '(<"x" |$n $n |@n>) (@write "/dev/stdout" @n)' 'x' 0
-test_code '(<(@write "/dev/stdout" argument 1)> "a" "b" "c")' 'a' 0
-test_code '(<(@write "/dev/stdout" argument 2)> "a" "b" "c")' 'b' 0
-test_code '(<(@write "/dev/stdout" argument 3)> "a" "b" "c")' 'c' 0
-test_code '<(@write "/dev/stdout" argument 1)> |$out ($out "a") ($out "b") ($out "c")' 'abc' 0
-test_code '(<(@write "/dev/stdout" (@merge argument 1 "!"))> "x")' 'x!' 0
-test_code '(@write "/dev/stdout" (<argument 1> "x"))' 'x' 0
-test_code '(@write "/dev/stdout" (<(@merge argument 1 (@merge argument 1 argument 1))> "x"))' 'xxx' 0
-test_code '(@write "/dev/stdout" (<argument 1 |$argument (@merge $argument "!")> "x"))' 'x!' 0
-test_code '<
-  argument 1 |$i
-  (@write "/dev/stdout" "x")
-  if (@precedes $i 5)
-    (@recurse (@add $i 1))
-> |@recurse (@recurse 1)' 'xxxxx' 0
-test_code '<
+  catch \ ($do) |$returned / |$thrown
+
+  if (@not $thrown)
+  \
+    (@writeStatus "FAIL" 31)
+    (@writeDetail "Reason" "an expected error was not thrown")
+    (@writeDetail "Returned" (@serialize $returned))
+    (@writeDetail "Source" (@serialize $do))
+    (@exit 1)
+  /
+
+  if (@not (@equals $thrown $expected))
+  \
+    (@writeStatus "FAIL" 31)
+    (@writeDetail "Reason" "an unexpected error was thrown")
+    (@writeDetail "Actual" (@serialize $thrown))
+    (@writeDetail "Expected" (@serialize $expected))
+    (@writeDetail "Source" (@serialize $do))
+    (@exit 1)
+  /
+> |@throws
+
+<
+  argument 1 |$source
+
+  catch \ (@deserialize $source) |$returned / |$thrown
+
+  if (@not $thrown)
+  \
+    (@writeStatus "FAIL" 31)
+    (@writeDetail "Reason" "an expected error was not thrown")
+    (@writeDetail "Returned" (@serialize $returned))
+    (@writeDetail "Source" (@serialize $source))
+    (@exit 1)
+  /
+
+  "codec error" |$expected
+
+  if (@not (@equals $thrown $expected))
+  \
+    (@writeStatus "FAIL" 31)
+    (@writeDetail "Reason" "an unexpected error was thrown")
+    (@writeDetail "Actual" (@serialize $thrown))
+    (@writeDetail "Expected" (@serialize $expected))
+    (@writeDetail "Source" (@serialize $source))
+    (@exit 1)
+  /
+> |@mistakes
+
+catch
+\
+  (@returns <> "")
+  (@returns < > "")
+  (@returns <
+> "")
+  (@returns <
+  #comment
+> "")
+  (@returns <""> "")
+  (@returns <"text"> "text")
+  (@returns <@add> @add)
+  (@returns <(@add 0 1)> 1)
+  (@returns <(@add 0 1) (@add 0 2) (@add 0 3)> 3)
+  (@returns <(@add 1 (@add 2 (@add 3 4)))> 10)
+  (@returns <(@add 0 1 "extra")> 1)
+  (@throws <(@write 2 "text" $invalid)> "absent variable")
+  (@mistakes "@")
+  (@mistakes "|")
+  (@mistakes "@|")
+  (@mistakes "|@")
+  (@returns <"text" |$variable> "text")
+  (@returns <"text" |$variable $variable> "text")
+  (@returns <"text" |$variable |$clone> "text")
+  (@returns <"text" |$variable |$clone $clone> "text")
+  (@returns <"text" |$variable |$variable> "text")
+  (@returns <"text" |$variable |$variable $variable> "text")
+  (@returns <@add |$a ($a 0 1)> 1)
+  (@returns <if "0" "x"> "x")
+  (@returns <if "1" "x"> "x")
+  (@returns <if "x" "x"> "x")
+  (@returns <if @write "x"> "x")
+  (@returns <if "" "x"> "")
+  (@returns <if "1" if "2" "x"> "x")
+  (@returns <if "1" if "" "x"> "")
+  (@returns <if "" if "2" "x"> "")
+  (@returns <if "" if "" "x"> "")
+  (@mistakes "if")
+  (@mistakes "if \"\"")
+  (@mistakes "junk")
+  (@returns <\ /> "")
+  (@returns <\ "a" /> "a")
+  (@returns <\ "a" "b" "c" /> "c")
+  (@mistakes "\\")
+  (@mistakes "/")
+  (@returns <while "" \ /> "")
+  (@returns <"x" |$test while $test \ "" |$test /> "")
+  (@returns <"x" |$test while $test \ "" |$test / $test> "")
+  (@returns <0 |$i while (@precedes $i 100) \ (@add $i 1) |$i /> "")
+  (@returns <0 |$i while (@precedes $i 100) \ (@add $i 1) |$i / $i> 100)
+  (@mistakes "while")
+  (@mistakes "while \"\"")
+  (@returns <catch \ $missing /> "absent variable")
+  (@returns <catch \ "text" /> "")
+  (@returns <catch \ /> "")
+  (@mistakes "catch")
+  (@throws <throw "error"> "error")
+  (@returns <catch \ throw "error" /> "error")
+  (@returns <(catch \ throw @add / 0 1)> 1)
+  (@throws <throw throw "error"> "error")
+  (@mistakes "throw")
+  (@throws <"text" |$variable %$variable $variable> "absent variable")
+  (@returns <%$variable> "")
+  (@returns <0 |$0 1 |$1 2 |$2 %$0 %$1 $2> 2)
+  (@returns <0 |$0 1 |$1 2 |$2 %$0 %$2 $1> 1)
+  (@returns <0 |$0 1 |$1 2 |$2 %$1 %$2 $0> 0)
+  (@returns <0 |$0 4 |$4 8 |$8 %$0 %$4 $8> 8)
+  (@returns <0 |$0 4 |$4 8 |$8 %$0 %$8 $4> 4)
+  (@returns <0 |$0 4 |$4 8 |$8 %$4 %$8 $0> 0)
+  (@returns <0 |$0 8 |$8 32 |$32 %$0 %$8 $32> 32)
+  (@returns <0 |$0 8 |$8 32 |$32 %$0 %$32 $8> 8)
+  (@returns <0 |$0 8 |$8 32 |$32 %$8 %$32 $0> 0)
+  (@returns <"x" |$0 |$1 |$2 |$3 |$4 |$5 |$6 |$7 |$8 |$9 $0> "x")
+  (@returns <"x" |$0 |$1 |$2 |$3 |$4 |$5 |$6 |$7 |$8 |$9 $9> "x")
+  (@returns <"x" |$0 |$0 |$0 |$0 |$0 |$0 |$0 |$0 |$0 |$0 $0> "x")
+  (@returns <0 |$0 1 |$1 2 |$2 3 |$3 4 |$4 5 |$5 6 |$6 7 |$7 8 |$8 9 |$9 $0> 0)
+  (@returns <0 |$0 1 |$1 2 |$2 3 |$3 4 |$4 5 |$5 6 |$6 7 |$7 8 |$8 9 |$9 $9> 9)
+  (@returns <0> 0)
+  (@returns <1> 1)
+  (@returns <-1> -1)
+  (@returns <+1> 1)
+  (@returns <100> 100)
+  (@returns <-100> -100)
+  (@returns <+100> 100)
+  (@returns <2147483647> 2147483647)
+  (@returns <-2147483647> -2147483647)
+  (@returns <+2147483647> 2147483647)
+  (@returns <000000000000000000000000000000000000000000000000002147483647> 2147483647)
+  (@mistakes "2147483648")
+  (@mistakes "-2147483648")
+  (@mistakes "+2147483648")
+  (@mistakes "--100")
+  (@mistakes "++100")
+  (@returns <(@add 0 0)> 0)
+  (@returns <(@add 0 1)> 1)
+  (@returns <(@add -1 1)> 0)
+  (@returns <(@add 2147483647 0)> 2147483647)
+  (@returns <(@add -2147483647 0)> -2147483647)
+  (@throws <(@add 2147483647 1)> "arithmetic error")
+  (@throws <(@add 1 2147483647)> "arithmetic error")
+  (@throws <(@add 2147483647 2147483647)> "arithmetic error")
+  (@throws <(@add -2147483647 -1)> "arithmetic error")
+  (@throws <(@add -1 -2147483647)> "arithmetic error")
+  (@throws <(@add -2147483647 -2147483647)> "arithmetic error")
+  (@throws <(@add)> "absent argument")
+  (@throws <(@add 0)> "absent argument")
+  (@throws <(@add "" 0)> "alien argument")
+  (@throws <(@add 0 "")> "alien argument")
+  (@throws <(@add <> 0)> "alien argument")
+  (@throws <(@add 0 <>)> "alien argument")
+  (@returns <(@subtract 0 0)> 0)
+  (@returns <(@subtract 0 -1)> 1)
+  (@returns <(@subtract -1 -1)> 0)
+  (@returns <(@subtract 2147483647 0)> 2147483647)
+  (@returns <(@subtract -2147483647 0)> -2147483647)
+  (@throws <(@subtract 2147483647 -1)> "arithmetic error")
+  (@throws <(@subtract -1 2147483647)> "arithmetic error")
+  (@throws <(@subtract 2147483647 -2147483647)> "arithmetic error")
+  (@throws <(@subtract -2147483647 1)> "arithmetic error")
+  (@throws <(@subtract 1 -2147483647)> "arithmetic error")
+  (@throws <(@subtract -2147483647 2147483647)> "arithmetic error")
+  (@throws <(@subtract)> "absent argument")
+  (@throws <(@subtract 0)> "absent argument")
+  (@throws <(@subtract "" 0)> "alien argument")
+  (@throws <(@subtract 0 "")> "alien argument")
+  (@throws <(@subtract <> 0)> "alien argument")
+  (@throws <(@subtract 0 <>)> "alien argument")
+  (@returns <(@multiply 0 0)> 0)
+  (@returns <(@multiply 1 1)> 1)
+  (@returns <(@multiply 1 0)> 0)
+  (@returns <(@multiply 2147483647 1)> 2147483647)
+  (@returns <(@multiply -2147483647 1)> -2147483647)
+  (@throws <(@multiply 2147483647 2)> "arithmetic error")
+  (@throws <(@multiply 2147483647 -2)> "arithmetic error")
+  (@throws <(@multiply -2147483647 2)> "arithmetic error")
+  (@throws <(@multiply -2147483647 -2)> "arithmetic error")
+  (@throws <(@multiply 2 2147483647)> "arithmetic error")
+  (@throws <(@multiply 2 -2147483647)> "arithmetic error")
+  (@throws <(@multiply -2 2147483647)> "arithmetic error")
+  (@throws <(@multiply -2 -2147483647)> "arithmetic error")
+  (@throws <(@multiply 2147483647 2147483647)> "arithmetic error")
+  (@throws <(@multiply 2147483647 -2147483647)> "arithmetic error")
+  (@throws <(@multiply -2147483647 2147483647)> "arithmetic error")
+  (@throws <(@multiply -2147483647 -2147483647)> "arithmetic error")
+  (@throws <(@multiply)> "absent argument")
+  (@throws <(@multiply 0)> "absent argument")
+  (@throws <(@multiply "" 0)> "alien argument")
+  (@throws <(@multiply 0 "")> "alien argument")
+  (@throws <(@multiply <> 0)> "alien argument")
+  (@throws <(@multiply 0 <>)> "alien argument")
+  (@returns <(@divide 0 1)> 0)
+  (@returns <(@divide 1 1)> 1)
+  (@returns <(@divide 1 4)> 0)
+  (@returns <(@divide 2147483647 1)> 2147483647)
+  (@returns <(@divide -2147483647 1)> -2147483647)
+  (@returns <(@divide 2147483647 2147483647)> 1)
+  (@returns <(@divide 2147483647 -2147483647)> -1)
+  (@returns <(@divide -2147483647 2147483647)> -1)
+  (@returns <(@divide -2147483647 -2147483647)> 1)
+  (@throws <(@divide 1 0)> "arithmetic error")
+  (@throws <(@divide -1 0)> "arithmetic error")
+  (@throws <(@divide)> "absent argument")
+  (@throws <(@divide 0)> "absent argument")
+  (@throws <(@divide "" 0)> "alien argument")
+  (@throws <(@divide 0 "")> "alien argument")
+  (@throws <(@divide <> 0)> "alien argument")
+  (@throws <(@divide 0 <>)> "alien argument")
+  (@returns <(@modulo 1 1)> 0)
+  (@returns <(@modulo 5 2)> 1)
+  (@returns <(@modulo 0 1)> 0)
+  (@returns <(@modulo 2147483647 2147483647)> 0)
+  (@returns <(@modulo 2147483647 -2147483647)> 0)
+  (@returns <(@modulo -2147483647 2147483647)> 0)
+  (@returns <(@modulo -2147483647 -2147483647)> 0)
+  (@throws <(@modulo 1 0)> "arithmetic error")
+  (@throws <(@modulo -1 0)> "arithmetic error")
+  (@throws <(@modulo)> "absent argument")
+  (@throws <(@modulo 0)> "absent argument")
+  (@throws <(@modulo "" 0)> "alien argument")
+  (@throws <(@modulo 0 "")> "alien argument")
+  (@throws <(@modulo <> 0)> "alien argument")
+  (@throws <(@modulo 0 <>)> "alien argument")
+  (@returns <(@increment -1)> 0)
+  (@returns <(@increment 0)> 1)
+  (@returns <(@increment 2147483646)> 2147483647)
+  (@throws <(@increment 2147483647)> "arithmetic error")
+  (@throws <(@increment)> "absent argument")
+  (@throws <(@increment "")> "alien argument")
+  (@throws <(@increment <>)> "alien argument")
+  (@returns <(@decrement 1)> 0)
+  (@returns <(@decrement 0)> -1)
+  (@returns <(@decrement -2147483646)> -2147483647)
+  (@throws <(@decrement -2147483647)> "arithmetic error")
+  (@throws <(@decrement)> "absent argument")
+  (@throws <(@decrement "")> "alien argument")
+  (@throws <(@decrement <>)> "alien argument")
+  (@returns <(@and 0 0)> 0)
+  (@returns <(@and 0 1)> 0)
+  (@returns <(@and 1 0)> 0)
+  (@returns <(@and 1 1)> 1)
+  (@returns <(@and "" "")> 0)
+  (@returns <(@and "" "x")> 0)
+  (@returns <(@and "x" "")> 0)
+  (@returns <(@and "x" "x")> 1)
+  (@returns <(@and 1 "x")> 1)
+  (@throws <(@and)> "absent argument")
+  (@throws <(@and 0)> "absent argument")
+  (@returns <(@or 0 0)> 0)
+  (@returns <(@or 0 1)> 1)
+  (@returns <(@or 1 0)> 1)
+  (@returns <(@or 1 1)> 1)
+  (@returns <(@or "" "")> 0)
+  (@returns <(@or "" "x")> 1)
+  (@returns <(@or "x" "")> 1)
+  (@returns <(@or "x" "x")> 1)
+  (@returns <(@or 1 "x")> 1)
+  (@throws <(@or)> "absent argument")
+  (@throws <(@or 0)> "absent argument")
+  (@returns <(@not 0)> 1)
+  (@returns <(@not 1)> 0)
+  (@returns <(@not "")> 1)
+  (@returns <(@not "x")> 0)
+  (@throws <(@not)> "absent argument")
+  (@returns <(@precedes 0 100)> 1)
+  (@returns <(@precedes 100 0)> 0)
+  (@returns <(@precedes 100 100)> 0)
+  (@returns <(@precedes 0 -100)> 0)
+  (@returns <(@precedes -100 0)> 1)
+  (@returns <(@precedes -100 -100)> 0)
+  (@returns <(@precedes "a" "b")> 1)
+  (@returns <(@precedes "b" "a")> 0)
+  (@returns <(@precedes "a" "a")> 0)
+  (@returns <(@precedes "A" "a")> 1)
+  (@returns <(@precedes "a" "A")> 0)
+  (@returns <(@precedes "A" "A")> 0)
+  (@returns <(@precedes @add @subtract)> 1)
+  (@returns <(@precedes @subtract @add)> 0)
+  (@returns <(@precedes @add @add)> 0)
+  (@returns <(@precedes <(@merge "a" "b")> <(@merge "b" "a")>)> 1)
+  (@returns <(@precedes <(@merge "b" "a")> <(@merge "a" "b")>)> 0)
+  (@returns <(@precedes <(@merge "a" "b")> <(@merge "a" "b")>)> 0)
+  (@returns <(@precedes @add <(@add argument 1 argument 2)>)> 0)
+  (@returns <(@precedes <(@add argument 1 argument 2)> @add)> 0)
+  (@returns <(@precedes 100 "100")> 1)
+  (@returns <(@precedes 100 @add)> 1)
+  (@returns <(@precedes "100" 100)> 0)
+  (@returns <(@precedes "100" @add)> 1)
+  (@returns <(@precedes @add 100)> 0)
+  (@returns <(@precedes @add "100")> 0)
+  (@throws <(@precedes)> "absent argument")
+  (@throws <(@precedes 0)> "absent argument")
+  (@returns <(@succeeds 0 100)> 0)
+  (@returns <(@succeeds 100 0)> 1)
+  (@returns <(@succeeds 100 100)> 0)
+  (@returns <(@succeeds 0 -100)> 1)
+  (@returns <(@succeeds -100 0)> 0)
+  (@returns <(@succeeds -100 -100)> 0)
+  (@returns <(@succeeds "a" "b")> 0)
+  (@returns <(@succeeds "b" "a")> 1)
+  (@returns <(@succeeds "a" "a")> 0)
+  (@returns <(@succeeds "A" "a")> 0)
+  (@returns <(@succeeds "a" "A")> 1)
+  (@returns <(@succeeds "A" "A")> 0)
+  (@returns <(@succeeds @add @subtract)> 0)
+  (@returns <(@succeeds @subtract @add)> 1)
+  (@returns <(@succeeds @add @add)> 0)
+  (@returns <(@succeeds <(@merge "a" "b")> <(@merge "b" "a")>)> 0)
+  (@returns <(@succeeds <(@merge "b" "a")> <(@merge "a" "b")>)> 1)
+  (@returns <(@succeeds <(@merge "a" "b")> <(@merge "a" "b")>)> 0)
+  (@returns <(@succeeds @add <(@add argument 1 argument 2)>)> 0)
+  (@returns <(@succeeds <(@add argument 1 argument 2)> @add)> 0)
+  (@returns <(@succeeds 100 "100")> 0)
+  (@returns <(@succeeds 100 @add)> 0)
+  (@returns <(@succeeds "100" 100)> 1)
+  (@returns <(@succeeds "100" @add)> 0)
+  (@returns <(@succeeds @add 100)> 1)
+  (@returns <(@succeeds @add "100")> 1)
+  (@throws <(@succeeds)> "absent argument")
+  (@throws <(@succeeds 0)> "absent argument")
+  (@returns <(@equals 0 100)> 0)
+  (@returns <(@equals 100 0)> 0)
+  (@returns <(@equals 100 100)> 1)
+  (@returns <(@equals 0 -100)> 0)
+  (@returns <(@equals -100 0)> 0)
+  (@returns <(@equals -100 -100)> 1)
+  (@returns <(@equals "a" "b")> 0)
+  (@returns <(@equals "b" "a")> 0)
+  (@returns <(@equals "a" "a")> 1)
+  (@returns <(@equals "A" "a")> 0)
+  (@returns <(@equals "a" "A")> 0)
+  (@returns <(@equals "A" "A")> 1)
+  (@returns <(@equals @add @subtract)> 0)
+  (@returns <(@equals @subtract @add)> 0)
+  (@returns <(@equals @add @add)> 1)
+  (@returns <(@equals <(@merge "a" "b")> <(@merge "b" "a")>)> 0)
+  (@returns <(@equals <(@merge "b" "a")> <(@merge "a" "b")>)> 0)
+  (@returns <(@equals <(@merge "a" "b")> <(@merge "a" "b")>)> 1)
+  (@returns <(@equals @add <(@add argument 1 argument 2)>)> 1)
+  (@returns <(@equals <(@add argument 1 argument 2)> @add)> 1)
+  (@returns <(@equals 100 "100")> 0)
+  (@returns <(@equals 100 @add)> 0)
+  (@returns <(@equals "100" 100)> 0)
+  (@returns <(@equals "100" @add)> 0)
+  (@returns <(@equals @add 100)> 0)
+  (@returns <(@equals @add "100")> 0)
+  (@throws <(@equals)> "absent argument")
+  (@throws <(@equals 0)> "absent argument")
+  (@returns <(@add, 1, 2)> 3)
+  (@returns <(@add,1,2)> 3)
+  (@returns <if,1,"x"> "x")
+  (@returns <if (@equals \1,2,3/ 3) "x"> "x")
+  (@returns <(@length "")> 0)
+  (@returns <(@length "1")> 1)
+  (@returns <(@length " ")> 1)
+  (@returns <(@length "123")> 3)
+  (@throws <(@length)> "absent argument")
+  (@throws <(@length 0)> "alien argument")
+  (@throws <(@length <>)> "alien argument")
+  (@returns <(@merge "" "")> "")
+  (@returns <(@merge "l" "")> "l")
+  (@returns <(@merge "" "r")> "r")
+  (@returns <(@merge "l" "r")> "lr")
+  (@returns <(@merge "ll" "rrrr")> "llrrrr")
+  (@throws <(@merge)> "absent argument")
+  (@throws <(@merge "")> "absent argument")
+  (@throws <(@merge 0 "")> "alien argument")
+  (@throws <(@merge "" 0)> "alien argument")
+  (@throws <(@merge <> "")> "alien argument")
+  (@throws <(@merge "" <>)> "alien argument")
+  (@returns <(@slice "" 1 1)> "")
+  (@returns <(@slice "x" 1 1)> "x")
+  (@returns <(@slice "123" 1 1)> "1")
+  (@returns <(@slice "123" 2 2)> "2")
+  (@returns <(@slice "123" 3 3)> "3")
+  (@returns <(@slice "123" 1 3)> "123")
+  (@returns <(@slice "123" 0 3)> "123")
+  (@returns <(@slice "123" 1 4)> "123")
+  (@returns <(@slice "123" 3 1)> "123")
+  (@returns <(@slice "123" 3 0)> "123")
+  (@returns <(@slice "123" 4 1)> "123")
+  (@throws <(@slice)> "absent argument")
+  (@throws <(@slice "")> "absent argument")
+  (@throws <(@slice "" 0)> "absent argument")
+  (@throws <(@slice 0 0 0)> "alien argument")
+  (@throws <(@slice <> 0 0)> "alien argument")
+  (@throws <(@slice "" "" 0)> "alien argument")
+  (@throws <(@slice "" <> 0)> "alien argument")
+  (@throws <(@slice "" 0 "")> "alien argument")
+  (@throws <(@slice "" 0 <>)> "alien argument")
+  (@returns <(@length "\\\"\t\r\n")> 5)
+  (@returns <(@length "\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f")> 16)
+  (@returns <(@length "\x00\x10\x20\x30\x40\x50\x60\x70\x80\x90\xa0\xb0\xc0\xd0\xe0\xf0")> 16)
+  (@returns <(@length "\x00\x11\x22\x33\x44\x55\x66\x77\x88\x99\xaa\xbb\xcc\xdd\xee\xff")> 16)
+  (@returns <"line 1\nline 2\nline 3"> "line 1\nline 2\nline 3")
+  (@returns <"line 1\x0aline 2\x0aline 3"> "line 1\nline 2\nline 3")
+  (@returns <"\x74\x65\x78\x74"> "text")
+  (@returns <"\x7c123\x7c"> "|123|")
+  (@returns <"\x7cabc\x7c"> "|abc|")
+  (@returns <"text" |$"variable" $"variable"> "text")
+  (@returns <"text" |$"variable" $variable> "text")
+  (@returns <"text" |$variable $"variable"> "text")
+  (@returns <"text" |$"" $""> "text")
+  (@returns <"text" |$"\"special\"" $"\"special\""> "text")
+  (@throws <"text" |$"\"special\"" %$"\"special\"" $"\"special\""> "absent variable")
+  (@mistakes "\"\\xFF\"")
+  (@mistakes "\"\\z\"")
+  (@mistakes "\"\\x\"")
+  (@mistakes "\"\\x0\"")
+  (@mistakes "\"\\x0z\"")
+  (@mistakes "\"\\xz0\"")
+  (@mistakes "@\"\\z\"")
+  (@mistakes "|@\"\\z\"")
+  (@mistakes "%@\"\\z\"")
+  (@returns <(@type 0)> "number")
+  (@returns <(@type "")> "string")
+  (@returns <(@type <>)> "function")
+  (@throws <(@type)> "absent argument")
+  (@returns <(@type (@query "TERM"))> "string")
+  (@returns <(@equals (@length (@query "TERM")) 0)> 0)
+  (@throws <(@query "__absent__")> "absent environment variable")
+  (@throws <(@query)> "absent argument")
+  (@throws <(@query 0)> "alien argument")
+  (@throws <(@query <>)> "alien argument")
+  (@throws <(@exit)> "absent argument")
+  (@throws <(@exit -1)> "damaged argument")
+  (@throws <(@exit 256)> "damaged argument")
+  (@returns <(@write "/tmp/lngrd.txt" "text") (@read "/tmp/lngrd.txt" "") |$file (@delete "/tmp/lngrd.txt") $file> "text")
+  (@throws <(@write "/tmp/lngrd.txt" "text") (@delete "/tmp/lngrd.txt") (@read "/tmp/lngrd.txt" "")> "absent file")
+  (@throws <(@write "/tmp/lngrd.txt" "text") (@delete "/tmp/lngrd.txt") (@delete "/tmp/lngrd.txt")> "io error")
+  (@throws <(@write 3 "")> "absent file")
+  (@throws <(@write "" "")> "absent file")
+  (@throws <(@write)> "absent argument")
+  (@throws <(@write "")> "absent argument")
+  (@throws <(@write "" 0)> "alien argument")
+  (@throws <(@write "" <>)> "alien argument")
+  (@throws <(@read 3 "")> "absent file")
+  (@throws <(@read "" "")> "absent file")
+  (@throws <(@read)> "absent argument")
+  (@throws <(@read "")> "absent argument")
+  (@throws <(@read "" 0)> "alien argument")
+  (@throws <(@read "" <>)> "alien argument")
+  (@throws <(@delete 3)> "io error")
+  (@throws <(@delete "")> "io error")
+  (@throws <(@delete)> "absent argument")
+  (@throws <(@delete <>)> "alien argument")
+  (@returns <<>> <>)
+  (@returns <(<>)> "")
+  (@returns <(<"x">)> "x")
+  (@returns <<throw "error">> <throw "error">)
+  (@throws <(<throw "error">)> "error")
+  (@returns <<"x"> |$f ($f) ($f) ($f)> "x")
+  (@returns <(catch \ throw <"x"> /)> "x")
+  (@returns <0 |$n (<1 |$n>) (<2 |$n>) (<3 |$n>) $n> 0)
+  (@returns <0 |@n (<1 |@n>) (<2 |@n>) (<3 |@n>) @n |$n %@n $n> 3)
+  (@returns <0 |$n (<> (<1 |$n>) (<2 |$n>) (<3 |$n>)) $n> 0)
+  (@returns <0 |@n (<> (<1 |@n>) (<2 |@n>) (<3 |@n>)) @n |$n %@n $n> 3)
+  (@returns <0 |$n (<> (<> (<1 |$n>) (<2 |$n>) (<3 |$n>))) $n> 0)
+  (@returns <0 |@n (<> (<> (<1 |@n>) (<2 |@n>) (<3 |@n>))) @n |$n %@n $n> 3)
+  (@throws <"x" |$var (<$var>)> "absent variable")
+  (@throws <(<"x" |$var>) $var> "absent variable")
+  (@returns <"x" |@var (<@var>) @var |$var %@var $var> "x")
+  (@returns <(<"x" |@var>) @var |$var %@var $var> "x")
+  (@returns <if <> "x"> "")
+  (@returns <if < > "x"> "")
+  (@returns <if <1> "x"> "x")
+  (@returns <(<argument 1> "a" "b" "c")> "a")
+  (@returns <(<argument 2> "a" "b" "c")> "b")
+  (@returns <(<argument 3> "a" "b" "c")> "c")
+  (@returns <<(@increment argument 1)> |$inc ($inc 0) |$n ($inc $n) |$n ($inc $n)> 3)
+  (@returns <<(@merge argument 1 "!")> |$bold ($bold "x")> "x!")
+  (@returns <(<argument 1> "x")> "x")
+  (@returns <(<(@merge argument 1 (@merge argument 1 argument 1))> "x")> "xxx")
+  (@returns <(<argument 1 |$arg (@merge $arg "!")> "x")> "x!")
+  (@throws <<
   argument 1 |$self
   argument 2 |$i
-  (@write "/dev/stdout" "x")
-  if (@precedes $i 5)
-    ($self $self (@add $i 1))
-> |$recurse ($recurse $recurse 1)' 'xxxxx' 0
-test_code '(@write "/dev/stdout" catch \ (<(@write "/dev/stdout" argument 0)> "a" "b" "c") /)' 'absent argument' 0
-test_code '(@write "/dev/stdout" catch \ (<(@write "/dev/stdout" argument 4)> "a" "b" "c") /)' 'absent argument' 0
-test_code '(@write "/dev/stdout" catch \ argument 1 /)' 'absent argument' 0
-test_code '(@write "/dev/stdout" catch \ (<argument 1>) /)' 'absent argument' 0
-test_code '(@write "/dev/stdout" catch \ (<argument 1> "x") argument 1 /)' 'absent argument' 0
-test_code '(@write "/dev/stdout" catch \ (<(@write "/dev/stdout" argument "")> "a" "b" "c") /)' 'alien argument' 0
-test_code '(@write "/dev/stdout" catch \ (<(@write "/dev/stdout" argument <>)> "a" "b" "c") /)' 'alien argument' 0
-test_code 'if (@equals (@deserialize "0") 0) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@equals (@deserialize "\"\"") "") (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@not (@deserialize "<>")) (@write "/dev/stdout" "x")' 'x' 0
-test_code '(@deserialize "<(@write \"/dev/stdout\" \"x\")>") |$f ($f)' 'x' 0
-test_code '(@write "/dev/stdout" catch \ (@deserialize "") /)' 'codec error' 0
-test_code '(@write "/dev/stdout" catch \ (@deserialize "#comment") /)' 'codec error' 0
-test_code '(@write "/dev/stdout" catch \ (@deserialize "@write") /)' 'codec error' 0
-test_code '(@write "/dev/stdout" catch \ (@deserialize "if 0 1") /)' 'codec error' 0
-test_code 'if (@equals @add <(@add argument 1 argument 2)>) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@equals @subtract <(@subtract argument 1 argument 2)>) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@equals @multiply <(@multiply argument 1 argument 2)>) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@equals @divide <(@divide argument 1 argument 2)>) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@equals @modulo <(@modulo argument 1 argument 2)>) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@equals @increment <(@increment argument 1)>) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@equals @decrement <(@decrement argument 1)>) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@equals @and <(@and argument 1 argument 2)>) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@equals @or <(@or argument 1 argument 2)>) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@equals @not <(@not argument 1)>) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@equals @precedes <(@precedes argument 1 argument 2)>) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@equals @succeeds <(@succeeds argument 1 argument 2)>) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@equals @equals <(@equals argument 1 argument 2)>) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@equals @length <(@length argument 1)>) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@equals @slice <(@slice argument 1 argument 2 argument 3)>) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@equals @merge <(@merge argument 1 argument 2)>) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@equals @read <(@read argument 1 argument 2)>) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@equals @write <(@write argument 1 argument 2)>) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@equals @delete <(@delete argument 1)>) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@equals @query <(@query argument 1)>) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@equals @exit <(@exit argument 1)>) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@equals @deserialize <(@deserialize argument 1)>) (@write "/dev/stdout" "x")' 'x' 0
-test_code 'if (@equals @type <(@type argument 1)>) (@write "/dev/stdout" "x")' 'x' 0
-test_code '(@write "/dev/stdout" (@serialize 0))' '0' 0
-test_code '(@write "/dev/stdout" (@serialize 1))' '1' 0
-test_code '(@write "/dev/stdout" (@serialize -1))' '-1' 0
-test_code '(@write "/dev/stdout" (@serialize +1))' '1' 0
-test_code '(@write "/dev/stdout" (@serialize 100))' '100' 0
-test_code '(@write "/dev/stdout" (@serialize -100))' '-100' 0
-test_code '(@write "/dev/stdout" (@serialize +100))' '100' 0
-test_code '(@write "/dev/stdout" (@serialize 2147483647))' '2147483647' 0
-test_code '(@write "/dev/stdout" (@serialize -2147483647))' '-2147483647' 0
-test_code '(@write "/dev/stdout" (@serialize +2147483647))' '2147483647' 0
-test_code '(@write "/dev/stdout" (@serialize 000000000000000000000000000000000000000000000000002147483647))' '2147483647' 0
-test_code '(@write "/dev/stdout" (@serialize ""))' '""' 0
-test_code '(@write "/dev/stdout" (@serialize "x"))' '"x"' 0
-test_code '(@write "/dev/stdout" (@serialize "text"))' '"text"' 0
-test_code '(@write "/dev/stdout" (@serialize "\n"))' '"\n"' 0
-test_code '(@write "/dev/stdout" (@serialize "\\\"\t\r\n"))' '"\\\"\t\r\n"' 0
-test_code '(@write "/dev/stdout" (@serialize "\xff"))' '"\xff"' 0
-test_code '(@write "/dev/stdout" (@serialize "\x00\x1f\x7f\xff"))' '"\x00\x1f\x7f\xff"' 0
-test_code '(@write "/dev/stdout" (@serialize <>))' '<>' 0
-test_code '(@write "/dev/stdout" (@serialize < >))' '< >' 0
-test_code '(@write "/dev/stdout" (@serialize <(@merge "a" "b")>))' '<(@merge "a" "b")>' 0
-test_code '(@write "/dev/stdout" (@serialize <
+  (@precedes $i 1000) |$cont
+  if $cont
+    ($self $self (@increment $i))
+  if (@not $cont)
+    throw $i
+> |$recurse
+($recurse $recurse 1)
+> 1000)
+  (@throws <(<argument 0> "a" "b" "c")> "absent argument")
+  (@throws <(<argument 4> "a" "b" "c")> "absent argument")
+  (@throws <argument 1> "absent argument")
+  (@throws <(<argument 1>)> "absent argument")
+  (@throws <(<argument 1> "x") argument 1> "absent argument")
+  (@throws <argument ""> "alien argument")
+  (@throws <argument <>> "alien argument")
+  (@returns <(@deserialize "0")> 0)
+  (@returns <(@deserialize "\"\"")> "")
+  (@returns <(@deserialize "<>")> <>)
+  (@returns <(@deserialize "<(@exit 1)>")> <(@exit 1)>)
+  (@throws <(@deserialize "")> "codec error")
+  (@throws <(@deserialize "#comment")> "codec error")
+  (@throws <(@deserialize "@write")> "codec error")
+  (@throws <(@deserialize "if 0 1")> "codec error")
+  (@returns <@add> <(@add argument 1 argument 2)>)
+  (@returns <@subtract> <(@subtract argument 1 argument 2)>)
+  (@returns <@multiply> <(@multiply argument 1 argument 2)>)
+  (@returns <@divide> <(@divide argument 1 argument 2)>)
+  (@returns <@modulo> <(@modulo argument 1 argument 2)>)
+  (@returns <@increment> <(@increment argument 1)>)
+  (@returns <@decrement> <(@decrement argument 1)>)
+  (@returns <@and> <(@and argument 1 argument 2)>)
+  (@returns <@or> <(@or argument 1 argument 2)>)
+  (@returns <@not> <(@not argument 1)>)
+  (@returns <@precedes> <(@precedes argument 1 argument 2)>)
+  (@returns <@succeeds> <(@succeeds argument 1 argument 2)>)
+  (@returns <@equals> <(@equals argument 1 argument 2)>)
+  (@returns <@length> <(@length argument 1)>)
+  (@returns <@slice> <(@slice argument 1 argument 2 argument 3)>)
+  (@returns <@merge> <(@merge argument 1 argument 2)>)
+  (@returns <@read> <(@read argument 1 argument 2)>)
+  (@returns <@write> <(@write argument 1 argument 2)>)
+  (@returns <@delete> <(@delete argument 1)>)
+  (@returns <@query> <(@query argument 1)>)
+  (@returns <@exit> <(@exit argument 1)>)
+  (@returns <@serialize> <(@serialize argument 1)>)
+  (@returns <@deserialize> <(@deserialize argument 1)>)
+  (@returns <@type> <(@type argument 1)>)
+  (@returns <(@serialize 0)> "0")
+  (@returns <(@serialize 1)> "1")
+  (@returns <(@serialize -1)> "-1")
+  (@returns <(@serialize +1)> "1")
+  (@returns <(@serialize 100)> "100")
+  (@returns <(@serialize -100)> "-100")
+  (@returns <(@serialize +100)> "100")
+  (@returns <(@serialize 2147483647)> "2147483647")
+  (@returns <(@serialize -2147483647)> "-2147483647")
+  (@returns <(@serialize +2147483647)> "2147483647")
+  (@returns <(@serialize 000000000000000000000000000000000000000000000000002147483647)> "2147483647")
+  (@returns <(@serialize "")> "\"\"")
+  (@returns <(@serialize "x")> "\"x\"")
+  (@returns <(@serialize "text")> "\"text\"")
+  (@returns <(@serialize "\n")> "\"\\n\"")
+  (@returns <(@serialize "\\\"\t\r\n")> "\"\\\\\\\"\\t\\r\\n\"")
+  (@returns <(@serialize "\xff")> "\"\\xff\"")
+  (@returns <(@serialize "\x00\x1f\x7f\xff")> "\"\\x00\\x1f\\x7f\\xff\"")
+  (@returns <(@serialize <>)> "<>")
+  (@returns <(@serialize < >)> "< >")
+  (@returns <(@serialize <(@merge "a" "b")>)> "<(@merge \"a\" \"b\")>")
+  (@returns <(@serialize <
   # make strings more exciting!
   (@merge argument 1 "!")
->))' '<
-  # make strings more exciting!
-  (@merge argument 1 "!")
->' 0
-test_code '(@write "/dev/stdout" (@serialize @add))' '<(@add argument 1 argument 2)>' 0
-test_code '(@write "/dev/stdout" (@serialize @subtract))' '<(@subtract argument 1 argument 2)>' 0
-test_code '(@write "/dev/stdout" (@serialize @multiply))' '<(@multiply argument 1 argument 2)>' 0
-test_code '(@write "/dev/stdout" (@serialize @divide))' '<(@divide argument 1 argument 2)>' 0
-test_code '(@write "/dev/stdout" (@serialize @modulo))' '<(@modulo argument 1 argument 2)>' 0
-test_code '(@write "/dev/stdout" (@serialize @increment))' '<(@increment argument 1)>' 0
-test_code '(@write "/dev/stdout" (@serialize @decrement))' '<(@decrement argument 1)>' 0
-test_code '(@write "/dev/stdout" (@serialize @and))' '<(@and argument 1 argument 2)>' 0
-test_code '(@write "/dev/stdout" (@serialize @or))' '<(@or argument 1 argument 2)>' 0
-test_code '(@write "/dev/stdout" (@serialize @not))' '<(@not argument 1)>' 0
-test_code '(@write "/dev/stdout" (@serialize @precedes))' '<(@precedes argument 1 argument 2)>' 0
-test_code '(@write "/dev/stdout" (@serialize @succeeds))' '<(@succeeds argument 1 argument 2)>' 0
-test_code '(@write "/dev/stdout" (@serialize @equals))' '<(@equals argument 1 argument 2)>' 0
-test_code '(@write "/dev/stdout" (@serialize @length))' '<(@length argument 1)>' 0
-test_code '(@write "/dev/stdout" (@serialize @slice))' '<(@slice argument 1 argument 2 argument 3)>' 0
-test_code '(@write "/dev/stdout" (@serialize @merge))' '<(@merge argument 1 argument 2)>' 0
-test_code '(@write "/dev/stdout" (@serialize @read))' '<(@read argument 1 argument 2)>' 0
-test_code '(@write "/dev/stdout" (@serialize @write))' '<(@write argument 1 argument 2)>' 0
-test_code '(@write "/dev/stdout" (@serialize @delete))' '<(@delete argument 1)>' 0
-test_code '(@write "/dev/stdout" (@serialize @query))' '<(@query argument 1)>' 0
-test_code '(@write "/dev/stdout" (@serialize @exit))' '<(@exit argument 1)>' 0
-test_code '(@write "/dev/stdout" (@serialize @deserialize))' '<(@deserialize argument 1)>' 0
-test_code '(@write "/dev/stdout" (@serialize @type))' '<(@type argument 1)>' 0
+>)> "<\n  # make strings more exciting!\n  (@merge argument 1 \"!\")\n>")
+  (@returns <(@serialize @add)> "<(@add argument 1 argument 2)>")
+  (@returns <(@serialize @subtract)> "<(@subtract argument 1 argument 2)>")
+  (@returns <(@serialize @multiply)> "<(@multiply argument 1 argument 2)>")
+  (@returns <(@serialize @divide)> "<(@divide argument 1 argument 2)>")
+  (@returns <(@serialize @modulo)> "<(@modulo argument 1 argument 2)>")
+  (@returns <(@serialize @increment)> "<(@increment argument 1)>")
+  (@returns <(@serialize @decrement)> "<(@decrement argument 1)>")
+  (@returns <(@serialize @and)> "<(@and argument 1 argument 2)>")
+  (@returns <(@serialize @or)> "<(@or argument 1 argument 2)>")
+  (@returns <(@serialize @not)> "<(@not argument 1)>")
+  (@returns <(@serialize @precedes)> "<(@precedes argument 1 argument 2)>")
+  (@returns <(@serialize @succeeds)> "<(@succeeds argument 1 argument 2)>")
+  (@returns <(@serialize @equals)> "<(@equals argument 1 argument 2)>")
+  (@returns <(@serialize @length)> "<(@length argument 1)>")
+  (@returns <(@serialize @slice)> "<(@slice argument 1 argument 2 argument 3)>")
+  (@returns <(@serialize @merge)> "<(@merge argument 1 argument 2)>")
+  (@returns <(@serialize @read)> "<(@read argument 1 argument 2)>")
+  (@returns <(@serialize @write)> "<(@write argument 1 argument 2)>")
+  (@returns <(@serialize @delete)> "<(@delete argument 1)>")
+  (@returns <(@serialize @query)> "<(@query argument 1)>")
+  (@returns <(@serialize @exit)> "<(@exit argument 1)>")
+  (@returns <(@serialize @serialize)> "<(@serialize argument 1)>")
+  (@returns <(@serialize @deserialize)> "<(@deserialize argument 1)>")
+  (@returns <(@serialize @type)> "<(@type argument 1)>")
+/ |$error
 
-write_status 'PASS' 32
+if $error
+\
+  (@write @stderr (@serialize $error))
+  (@write @stderr "\n")
+  (@exit 1)
+/
+
+(@writeStatus "PASS" 32)

@@ -13,7 +13,7 @@ clean:
 	rm -f bin/lngrd obj/main.o
 
 check: bin/lngrd
-	cd test && ./check ../bin/lngrd
+	cd test && ../bin/lngrd check
 
 install: bin/lngrd
 	cp bin/lngrd $(DESTDIR)$(PREFIX)/bin/ && cp src/lngrd.h $(DESTDIR)$(PREFIX)/include/
