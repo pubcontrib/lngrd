@@ -1951,63 +1951,63 @@ static int unescape_string(const lngrd_String *string, lngrd_String **result)
                                 break;
 
                             case '1':
-                                byte |= 16;
+                                byte |= 0x10;
                                 break;
 
                             case '2':
-                                byte |= 32;
+                                byte |= 0x20;
                                 break;
 
                             case '3':
-                                byte |= 48;
+                                byte |= 0x30;
                                 break;
 
                             case '4':
-                                byte |= 64;
+                                byte |= 0x40;
                                 break;
 
                             case '5':
-                                byte |= 80;
+                                byte |= 0x50;
                                 break;
 
                             case '6':
-                                byte |= 96;
+                                byte |= 0x60;
                                 break;
 
                             case '7':
-                                byte |= 112;
+                                byte |= 0x70;
                                 break;
 
                             case '8':
-                                byte |= 128;
+                                byte |= 0x80;
                                 break;
 
                             case '9':
-                                byte |= 144;
+                                byte |= 0x90;
                                 break;
 
                             case 'a':
-                                byte |= 160;
+                                byte |= 0xa0;
                                 break;
 
                             case 'b':
-                                byte |= 176;
+                                byte |= 0xb0;
                                 break;
 
                             case 'c':
-                                byte |= 192;
+                                byte |= 0xc0;
                                 break;
 
                             case 'd':
-                                byte |= 208;
+                                byte |= 0xd0;
                                 break;
 
                             case 'e':
-                                byte |= 224;
+                                byte |= 0xe0;
                                 break;
 
                             case 'f':
-                                byte |= 240;
+                                byte |= 0xf0;
                                 break;
 
                             default:
@@ -2021,63 +2021,63 @@ static int unescape_string(const lngrd_String *string, lngrd_String **result)
                                 break;
 
                             case '1':
-                                byte |= 1;
+                                byte |= 0x01;
                                 break;
 
                             case '2':
-                                byte |= 2;
+                                byte |= 0x02;
                                 break;
 
                             case '3':
-                                byte |= 3;
+                                byte |= 0x03;
                                 break;
 
                             case '4':
-                                byte |= 4;
+                                byte |= 0x04;
                                 break;
 
                             case '5':
-                                byte |= 5;
+                                byte |= 0x05;
                                 break;
 
                             case '6':
-                                byte |= 6;
+                                byte |= 0x06;
                                 break;
 
                             case '7':
-                                byte |= 7;
+                                byte |= 0x07;
                                 break;
 
                             case '8':
-                                byte |= 8;
+                                byte |= 0x08;
                                 break;
 
                             case '9':
-                                byte |= 9;
+                                byte |= 0x09;
                                 break;
 
                             case 'a':
-                                byte |= 10;
+                                byte |= 0x0a;
                                 break;
 
                             case 'b':
-                                byte |= 11;
+                                byte |= 0x0b;
                                 break;
 
                             case 'c':
-                                byte |= 12;
+                                byte |= 0x0c;
                                 break;
 
                             case 'd':
-                                byte |= 13;
+                                byte |= 0x0d;
                                 break;
 
                             case 'e':
-                                byte |= 14;
+                                byte |= 0x0e;
                                 break;
 
                             case 'f':
-                                byte |= 15;
+                                byte |= 0x0f;
                                 break;
 
                             default:
