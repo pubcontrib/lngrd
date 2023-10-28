@@ -9,6 +9,14 @@ catch
     0 |@color
   /
 /
+1 |@persistence
+catch
+\
+  if (@query "NO_PERSISTENCE")
+  \
+    0 |@persistence
+  /
+/
 
 <
   argument 1 |$status
@@ -709,35 +717,44 @@ catch
   \
     # read built-in
 
-    (@throws <(@write "/tmp/lngrd.txt" "text") (@delete "/tmp/lngrd.txt") (@read "/tmp/lngrd.txt" "")> "absent file")
-    (@throws <(@read 3 "")> "absent file")
-    (@throws <(@read "" "")> "absent file")
-    (@throws <(@read)> "absent argument")
-    (@throws <(@read "")> "absent argument")
-    (@throws <(@read "" 0)> "alien argument")
-    (@throws <(@read "" <>)> "alien argument")
+    if @persistence
+    \
+      (@throws <(@write "/tmp/lngrd.txt" "text") (@delete "/tmp/lngrd.txt") (@read "/tmp/lngrd.txt" "")> "absent file")
+      (@throws <(@read 3 "")> "absent file")
+      (@throws <(@read "" "")> "absent file")
+      (@throws <(@read)> "absent argument")
+      (@throws <(@read "")> "absent argument")
+      (@throws <(@read "" 0)> "alien argument")
+      (@throws <(@read "" <>)> "alien argument")
+    /
   /
 
   \
     # write built-in
 
-    (@returns <(@write "/tmp/lngrd.txt" "text") (@read "/tmp/lngrd.txt" "") |$file (@delete "/tmp/lngrd.txt") $file> "text")
-    (@throws <(@write 3 "")> "absent file")
-    (@throws <(@write "" "")> "absent file")
-    (@throws <(@write)> "absent argument")
-    (@throws <(@write "")> "absent argument")
-    (@throws <(@write "" 0)> "alien argument")
-    (@throws <(@write "" <>)> "alien argument")
+    if @persistence
+    \
+      (@returns <(@write "/tmp/lngrd.txt" "text") (@read "/tmp/lngrd.txt" "") |$file (@delete "/tmp/lngrd.txt") $file> "text")
+      (@throws <(@write 3 "")> "absent file")
+      (@throws <(@write "" "")> "absent file")
+      (@throws <(@write)> "absent argument")
+      (@throws <(@write "")> "absent argument")
+      (@throws <(@write "" 0)> "alien argument")
+      (@throws <(@write "" <>)> "alien argument")
+    /
   /
 
   \
     # delete built-in
 
-    (@throws <(@write "/tmp/lngrd.txt" "text") (@delete "/tmp/lngrd.txt") (@delete "/tmp/lngrd.txt")> "io error")
-    (@throws <(@delete 3)> "io error")
-    (@throws <(@delete "")> "io error")
-    (@throws <(@delete)> "absent argument")
-    (@throws <(@delete <>)> "alien argument")
+    if @persistence
+    \
+      (@throws <(@write "/tmp/lngrd.txt" "text") (@delete "/tmp/lngrd.txt") (@delete "/tmp/lngrd.txt")> "io error")
+      (@throws <(@delete 3)> "io error")
+      (@throws <(@delete "")> "io error")
+      (@throws <(@delete)> "absent argument")
+      (@throws <(@delete <>)> "alien argument")
+    /
   /
 
   \
