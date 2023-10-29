@@ -99,12 +99,20 @@ typedef struct
     size_t capacity;
 } lngrd_List;
 
+/*lifecycle phase of block key-value pair*/
+typedef enum
+{
+    LNGRD_PAIR_PHASE_UNCLAIMED,
+    LNGRD_PAIR_PHASE_OCCUPIED,
+    LNGRD_PAIR_PHASE_VACANT
+} lngrd_PairPhase;
+
 /*block key-value pair*/
 typedef struct
 {
     lngrd_Block *key;
     lngrd_Block *value;
-    lngrd_UInt phase; /*(enum) 0,unclaimed 1,occupied 2,vacant*/
+    lngrd_PairPhase phase;
 } lngrd_Pair;
 
 /*block associated array*/
@@ -187,12 +195,19 @@ typedef struct
     lngrd_Block *expression;
 } lngrd_Parser;
 
+/*memory claim of expression execution iterator internals*/
+typedef enum
+{
+    LNGRD_ACTION_OWN_ITEMS = 0x01,
+    LNGRD_ACTION_OWN_LIST = 0x02
+} lngrd_ActionOwn;
+
 /*expression execution iterator*/
 typedef struct
 {
     lngrd_List *expressions;
     size_t index;
-    lngrd_UInt ownership; /*(bitmask) 1,own-items 2,own-list*/
+    lngrd_UInt ownership;
     lngrd_UInt phase;
     lngrd_UInt checkpoint;
     lngrd_UInt capacity;
@@ -1126,7 +1141,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
         return;
     }
 
-    push_plan_action(plan, create_action(expressions, 0, 0x3, 0, 0, 0));
+    push_plan_action(plan, create_action(expressions, 0, LNGRD_ACTION_OWN_ITEMS | LNGRD_ACTION_OWN_LIST, 0, 0, 0));
 
     while (plan->length > 0)
     {
@@ -1292,7 +1307,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
                     single = create_list();
                     push_list_item(single, form->arguments->items[action->phase]);
-                    push_plan_action(plan, create_action(single, 0, 0x2, 0, action->checkpoint, action->capacity));
+                    push_plan_action(plan, create_action(single, 0, LNGRD_ACTION_OWN_LIST, 0, action->checkpoint, action->capacity));
                     action->phase += 1;
                     sustain = 1;
 
@@ -1325,7 +1340,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
                     checkpoint = function->inlined ? action->checkpoint : executer->arguments->length;
 
                     push_list_item(locals, NULL);
-                    push_plan_action(plan, create_action(function->expressions, 0, 0x0, 0, checkpoint, action->phase));
+                    push_plan_action(plan, create_action(function->expressions, 0, 0, 0, checkpoint, action->phase));
                     action->phase += 1;
                     sustain = 1;
 
@@ -1346,7 +1361,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
                     single = create_list();
                     push_list_item(single, form->test);
-                    push_plan_action(plan, create_action(single, 0, 0x2, 0, action->checkpoint, action->capacity));
+                    push_plan_action(plan, create_action(single, 0, LNGRD_ACTION_OWN_LIST, 0, action->checkpoint, action->capacity));
                     action->phase = 1;
                     sustain = 1;
 
@@ -1360,7 +1375,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
                         single = create_list();
                         push_list_item(single, form->pass);
-                        push_plan_action(plan, create_action(single, 0, 0x2, 0, action->checkpoint, action->capacity));
+                        push_plan_action(plan, create_action(single, 0, LNGRD_ACTION_OWN_LIST, 0, action->checkpoint, action->capacity));
                         action->phase = 2;
                         sustain = 1;
 
@@ -1384,7 +1399,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
                     single = create_list();
                     push_list_item(single, form->test);
-                    push_plan_action(plan, create_action(single, 0, 0x2, 0, action->checkpoint, action->capacity));
+                    push_plan_action(plan, create_action(single, 0, LNGRD_ACTION_OWN_LIST, 0, action->checkpoint, action->capacity));
                     action->phase = 1;
                     sustain = 1;
 
@@ -1398,7 +1413,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
                         single = create_list();
                         push_list_item(single, form->body);
-                        push_plan_action(plan, create_action(single, 0, 0x2, 0, action->checkpoint, action->capacity));
+                        push_plan_action(plan, create_action(single, 0, LNGRD_ACTION_OWN_LIST, 0, action->checkpoint, action->capacity));
                         action->phase = 0;
                         sustain = 1;
 
@@ -1429,7 +1444,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
                     single = create_list();
                     push_list_item(single, form->failable);
-                    push_plan_action(plan, create_action(single, 0, 0x2, 0, action->checkpoint, action->capacity));
+                    push_plan_action(plan, create_action(single, 0, LNGRD_ACTION_OWN_LIST, 0, action->checkpoint, action->capacity));
                     action->phase = 1;
                     sustain = 1;
 
@@ -1459,7 +1474,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
                     single = create_list();
                     push_list_item(single, form->error);
-                    push_plan_action(plan, create_action(single, 0, 0x2, 0, action->checkpoint, action->capacity));
+                    push_plan_action(plan, create_action(single, 0, LNGRD_ACTION_OWN_LIST, 0, action->checkpoint, action->capacity));
                     action->phase = 1;
                     sustain = 1;
 
@@ -1484,7 +1499,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
                     single = create_list();
                     push_list_item(single, form->index);
-                    push_plan_action(plan, create_action(single, 0, 0x2, 0, action->checkpoint, action->capacity));
+                    push_plan_action(plan, create_action(single, 0, LNGRD_ACTION_OWN_LIST, 0, action->checkpoint, action->capacity));
                     action->phase = 1;
                     sustain = 1;
 
@@ -1529,7 +1544,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
                 lngrd_GroupForm *form;
 
                 form = (lngrd_GroupForm *) expression->form;
-                push_plan_action(plan, create_action(form->expressions, 0, 0x0, 0, action->checkpoint, action->capacity));
+                push_plan_action(plan, create_action(form->expressions, 0, 0, 0, action->checkpoint, action->capacity));
                 action->index += 1;
                 action->phase = 0;
                 sustain = 1;
@@ -3928,7 +3943,7 @@ static lngrd_Map *create_map(void)
 
     for (index = 0; index < map->capacity; index++)
     {
-        map->items[index].phase = 0;
+        map->items[index].phase = LNGRD_PAIR_PHASE_UNCLAIMED;
     }
 
     return map;
@@ -3951,14 +3966,14 @@ static lngrd_Block *get_map_item(lngrd_Map *map, lngrd_Block *key)
 
         pair = &map->items[index];
 
-        if (pair->phase == 1)
+        if (pair->phase == LNGRD_PAIR_PHASE_OCCUPIED)
         {
             if (compare_blocks(key, pair->key) == 0)
             {
                 return pair->value;
             }
         }
-        else if (pair->phase == 2)
+        else if (pair->phase == LNGRD_PAIR_PHASE_VACANT)
         {
             continue;
         }
@@ -3988,7 +4003,7 @@ static void set_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_Block *block, l
 
         for (index = 0; index < map->capacity; index++)
         {
-            map->items[index].phase = 0;
+            map->items[index].phase = LNGRD_PAIR_PHASE_UNCLAIMED;
         }
 
         for (index = 0; index < oldLength; index++)
@@ -3997,7 +4012,7 @@ static void set_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_Block *block, l
 
             item = &oldItems[index];
 
-            if (item->phase == 1)
+            if (item->phase == LNGRD_PAIR_PHASE_OCCUPIED)
             {
                 set_map_item(map, item->key, item->value, pyre);
             }
@@ -4019,7 +4034,7 @@ static void set_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_Block *block, l
 
         pair = &map->items[index];
 
-        if (pair->phase == 1)
+        if (pair->phase == LNGRD_PAIR_PHASE_OCCUPIED)
         {
             if (compare_blocks(key, pair->key) == 0)
             {
@@ -4036,7 +4051,7 @@ static void set_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_Block *block, l
             map->length += 1;
             pair->key = key;
             pair->value = block;
-            pair->phase = 1;
+            pair->phase = LNGRD_PAIR_PHASE_OCCUPIED;
 
             break;
         }
@@ -4060,18 +4075,18 @@ static void unset_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_List *pyre)
 
         pair = &map->items[index];
 
-        if (pair->phase == 1)
+        if (pair->phase == LNGRD_PAIR_PHASE_OCCUPIED)
         {
             if (compare_blocks(key, pair->key) == 0)
             {
                 push_list_item(pyre, pair->key);
                 push_list_item(pyre, pair->value);
-                pair->phase = 2;
+                pair->phase = LNGRD_PAIR_PHASE_VACANT;
 
                 break;
             }
         }
-        else if (pair->phase == 2)
+        else if (pair->phase == LNGRD_PAIR_PHASE_VACANT)
         {
             continue;
         }
@@ -4092,7 +4107,7 @@ static void burn_map(lngrd_Map *map, lngrd_List *pyre)
 
         item = map->items[index];
 
-        if (item.phase == 1)
+        if (item.phase == LNGRD_PAIR_PHASE_OCCUPIED)
         {
             push_list_item(pyre, item.key);
             push_list_item(pyre, item.value);
@@ -4375,7 +4390,7 @@ static void burn_action(lngrd_Action *action, lngrd_List *pyre)
 {
     if (action->expressions)
     {
-        if (action->ownership & 0x1)
+        if (action->ownership & LNGRD_ACTION_OWN_ITEMS)
         {
             while (action->expressions->length > 0)
             {
@@ -4383,7 +4398,7 @@ static void burn_action(lngrd_Action *action, lngrd_List *pyre)
             }
         }
 
-        if (action->ownership & 0x2)
+        if (action->ownership & LNGRD_ACTION_OWN_LIST)
         {
             free(action->expressions->items);
             free(action->expressions);
