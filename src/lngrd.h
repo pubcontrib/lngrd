@@ -317,7 +317,7 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser);
 LNGRD_API void lngrd_stop_parser(lngrd_Parser *parser);
 /*initializes an executer*/
 LNGRD_API void lngrd_start_executer(lngrd_Executer *executer);
-/*moves an executer forward with a given quest*/
+/*moves an executer forward with a given plan*/
 LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *parser);
 /*cleans up resources owned by an executer*/
 LNGRD_API void lngrd_stop_executer(lngrd_Executer *executer);
