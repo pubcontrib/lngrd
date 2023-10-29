@@ -247,6 +247,7 @@ catch
     (@returns <"text" |$variable> "text")
     (@returns <"text" |$variable |$clone> "text")
     (@returns <"text" |$variable |$variable> "text")
+    (@returns <|$variable> "")
     (@returns <@add |$a ($a 0 1)> 1)
     (@returns <"text" |$"variable" $"variable"> "text")
     (@returns <"text" |$"variable" $variable> "text")

@@ -1058,7 +1058,7 @@ LNGRD_API void lngrd_start_executer(lngrd_Executer *executer)
     executer->arguments = create_list();
     executer->locals = create_list();
     executer->pyre = create_list();
-    executer->result = NULL;
+    executer->result = create_block(LNGRD_BLOCK_TYPE_STRING, cstring_to_string(""), 1);
 
     set_global_function("add", "<(@add argument 1 argument 2)>", do_add_work, executer);
     set_global_function("subtract", "<(@subtract argument 1 argument 2)>", do_subtract_work, executer);
@@ -1196,13 +1196,6 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
                 lngrd_AssignForm *form;
 
                 form = (lngrd_AssignForm *) expression->form;
-
-                if (!executer->result)
-                {
-                    set_executer_error("absent result", executer);
-                    break;
-                }
-
                 form->name->references++;
                 executer->result->references++;
 
