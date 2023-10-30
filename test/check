@@ -221,6 +221,9 @@ catch
     (@returns <"text" |$variable $variable> "text")
     (@returns <"text" |$variable |$clone $clone> "text")
     (@returns <"text" |$variable |$variable $variable> "text")
+    (@returns <0 |$number $number> 0)
+    (@returns <"" |$string $string> "")
+    (@returns <<> |$function $function> <>)
     (@returns <0 |$0 1 |$1 2 |$2 %$0 %$1 $2> 2)
     (@returns <0 |$0 1 |$1 2 |$2 %$0 %$2 $1> 1)
     (@returns <0 |$0 1 |$1 2 |$2 %$1 %$2 $0> 0)
@@ -247,6 +250,9 @@ catch
     (@returns <"text" |$variable> "text")
     (@returns <"text" |$variable |$clone> "text")
     (@returns <"text" |$variable |$variable> "text")
+    (@returns <0 |$number> 0)
+    (@returns <"" |$string> "")
+    (@returns <<> |$function> <>)
     (@returns <|$variable> "")
     (@returns <@add |$a ($a 0 1)> 1)
     (@returns <"text" |$"variable" $"variable"> "text")
@@ -264,6 +270,9 @@ catch
     # unassign expression
 
     (@returns <%$variable> "")
+    (@returns <0 |$number %$number> "")
+    (@returns <"" |$string %$string> "")
+    (@returns <<> |$function %$function> "")
     (@throws <"text" |$variable %$variable $variable> "absent variable")
     (@throws <"text" |$"\"special\"" %$"\"special\"" $"\"special\""> "absent variable")
   /
@@ -296,13 +305,19 @@ catch
   \
     # branch expression
 
-    (@returns <if "0" "x"> "x")
-    (@returns <if "1" "x"> "x")
-    (@returns <if "x" "x"> "x")
+    (@returns <if 0 "x"> "")
     (@returns <if "" "x"> "")
     (@returns <if <> "x"> "")
     (@returns <if < > "x"> "")
-    (@returns <if <1> "x"> "x")
+    (@returns <if 1 "x"> "x")
+    (@returns <if -1 "x"> "x")
+    (@returns <if 100 "x"> "x")
+    (@returns <if -100 "x"> "x")
+    (@returns <if "x" "x"> "x")
+    (@returns <if "0" "x"> "x")
+    (@returns <if "1" "x"> "x")
+    (@returns <if <""> "x"> "x")
+    (@returns <if <"x"> "x"> "x")
     (@returns <if @write "x"> "x")
     (@returns <if "1" if "2" "x"> "x")
     (@returns <if "1" if "" "x"> "")
@@ -315,7 +330,20 @@ catch
   \
     # loop expression
 
+    (@returns <while 0 \ /> "")
     (@returns <while "" \ /> "")
+    (@returns <while <> \ /> "")
+    (@returns <while < > \ /> "")
+    (@throws <while 1 \ throw "x" /> "x")
+    (@throws <while -1 \ throw "x" /> "x")
+    (@throws <while 100 \ throw "x" /> "x")
+    (@throws <while -100 \ throw "x" /> "x")
+    (@throws <while "x" \ throw "x" /> "x")
+    (@throws <while "0" \ throw "x" /> "x")
+    (@throws <while "1" \ throw "x" /> "x")
+    (@throws <while <""> \ throw "x" /> "x")
+    (@throws <while <"x">\ throw "x" /> "x")
+    (@throws <while @write \ throw "x" /> "x")
     (@returns <"x" |$test while $test \ "" |$test /> "")
     (@returns <"x" |$test while $test \ "" |$test / $test> "")
     (@returns <0 |$i while (@precedes $i 100) \ (@add $i 1) |$i /> "")
@@ -327,9 +355,11 @@ catch
   \
     # catch expression
 
-    (@returns <catch \ $missing /> "absent variable")
-    (@returns <catch \ "text" /> "")
     (@returns <catch \ /> "")
+    (@returns <catch \ 0 /> "")
+    (@returns <catch \ "" /> "")
+    (@returns <catch \ <> /> "")
+    (@returns <catch \ $missing /> "absent variable")
     (@mistakes "catch")
   /
 
@@ -337,6 +367,9 @@ catch
     # throw expression
 
     (@throws <throw "error"> "error")
+    (@throws <throw 1> 1)
+    (@throws <throw "x"> "x")
+    (@throws <throw <"x">> <"x">)
     (@returns <catch \ throw "error" /> "error")
     (@returns <(catch \ throw @add / 0 1)> 1)
     (@throws <throw throw "error"> "error")
@@ -533,6 +566,10 @@ catch
     (@returns <(@and "" "x")> 0)
     (@returns <(@and "x" "")> 0)
     (@returns <(@and "x" "x")> 1)
+    (@returns <(@and <> <>)> 0)
+    (@returns <(@and <> <"x">)> 0)
+    (@returns <(@and <"x"> <>)> 0)
+    (@returns <(@and <"x"> <"x">)> 1)
     (@returns <(@and 1 "x")> 1)
     (@throws <(@and)> "absent argument")
     (@throws <(@and 0)> "absent argument")
@@ -549,6 +586,10 @@ catch
     (@returns <(@or "" "x")> 1)
     (@returns <(@or "x" "")> 1)
     (@returns <(@or "x" "x")> 1)
+    (@returns <(@or <> <>)> 0)
+    (@returns <(@or <> <"x">)> 1)
+    (@returns <(@or <"x"> <>)> 1)
+    (@returns <(@or <"x"> <"x">)> 1)
     (@returns <(@or 1 "x")> 1)
     (@throws <(@or)> "absent argument")
     (@throws <(@or 0)> "absent argument")
@@ -561,6 +602,8 @@ catch
     (@returns <(@not 1)> 0)
     (@returns <(@not "")> 1)
     (@returns <(@not "x")> 0)
+    (@returns <(@not <>)> 1)
+    (@returns <(@not <"x">)> 0)
     (@throws <(@not)> "absent argument")
   /
 
@@ -765,6 +808,8 @@ catch
     (@throws <(@exit)> "absent argument")
     (@throws <(@exit -1)> "damaged argument")
     (@throws <(@exit 256)> "damaged argument")
+    (@throws <(@exit "")> "alien argument")
+    (@throws <(@exit <>)> "alien argument")
   /
 
   \
