@@ -63,9 +63,10 @@ catch
   argument 1 |$do
   argument 2 |$expected
 
-  catch \ ($do) |$returned / |$thrown
+  0 |$clear
+  catch \ ($do) |$returned 1 |$clear / |$thrown
 
-  if $thrown
+  if (@not $clear)
   \
     (@writeStatus "FAIL" 31)
     (@writeDetail "Reason" "an unexpected error was thrown")
@@ -89,9 +90,10 @@ catch
   argument 1 |$do
   argument 2 |$expected
 
-  catch \ ($do) |$returned / |$thrown
+  0 |$clear
+  catch \ ($do) |$returned 1 |$clear / |$thrown
 
-  if (@not $thrown)
+  if $clear
   \
     (@writeStatus "FAIL" 31)
     (@writeDetail "Reason" "an expected error was not thrown")
@@ -114,9 +116,10 @@ catch
 <
   argument 1 |$source
 
-  catch \ (@deserialize $source) |$returned / |$thrown
+  0 |$clear
+  catch \ (@deserialize $source) |$returned 1 |$clear / |$thrown
 
-  if (@not $thrown)
+  if $clear
   \
     (@writeStatus "FAIL" 31)
     (@writeDetail "Reason" "an expected error was not thrown")
@@ -367,9 +370,9 @@ catch
     # throw expression
 
     (@throws <throw "error"> "error")
-    (@throws <throw 1> 1)
-    (@throws <throw "x"> "x")
-    (@throws <throw <"x">> <"x">)
+    (@throws <throw 0> 0)
+    (@throws <throw ""> "")
+    (@throws <throw <>> <>)
     (@returns <catch \ throw "error" /> "error")
     (@returns <(catch \ throw @add / 0 1)> 1)
     (@throws <throw throw "error"> "error")
