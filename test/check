@@ -774,14 +774,89 @@ catch
 
     if @persistence
     \
+      (@returns <
+  "/tmp" |$directory
+  catch \ (@query "TMPDIR") |$directory /
+  (@merge $directory "/read.txt") |$file
+  (@write $file "")
+  (@read $file "") |$result
+  (@delete $file)
+  $result
+> "")
+      (@returns <
+  "/tmp" |$directory
+  catch \ (@query "TMPDIR") |$directory /
+  (@merge $directory "/read.txt") |$file
+  (@write $file "TEXT FILE")
+  (@read $file "") |$result
+  (@delete $file)
+  $result
+> "TEXT FILE")
+      (@returns <
+  "/tmp" |$directory
+  catch \ (@query "TMPDIR") |$directory /
+  (@merge $directory "/read.txt") |$file
+  (@write $file "LINE 1\nLINE 2\nLINE 3")
+  (@read $file "") |$result
+  (@delete $file)
+  $result
+> "LINE 1\nLINE 2\nLINE 3")
+      (@returns <
+  "/tmp" |$directory
+  catch \ (@query "TMPDIR") |$directory /
+  (@merge $directory "/read.txt") |$file
+  (@write $file "")
+  (@read $file "\n") |$result
+  (@delete $file)
+  $result
+> "")
+      (@returns <
+  "/tmp" |$directory
+  catch \ (@query "TMPDIR") |$directory /
+  (@merge $directory "/read.txt") |$file
+  (@write $file "TEXT FILE")
+  (@read $file "\n") |$result
+  (@delete $file)
+  $result
+> "TEXT FILE")
+      (@returns <
+  "/tmp" |$directory
+  catch \ (@query "TMPDIR") |$directory /
+  (@merge $directory "/read.txt") |$file
+  (@write $file "LINE 1\nLINE 2\nLINE 3")
+  (@read $file "\n") |$result
+  (@delete $file)
+  $result
+> "LINE 1")
+      (@returns <
+  "/tmp" |$directory
+  catch \ (@query "TMPDIR") |$directory /
+  (@merge $directory "/read.txt") |$file
+  (@write $file "LINE 1\nLINE 2\nLINE 3")
+  (@read $file "\n") |$result
+  (@read $file "\n") |$result
+  (@read $file "\n") |$result
+  (@delete $file)
+  $result
+> "LINE 1")
+      (@returns <
+  "/tmp" |$directory
+  catch \ (@query "TMPDIR") |$directory /
+  (@merge $directory "/read.txt") |$file
+  (@write $file "WORD 1\x00WORD 2\x00WORD 3")
+  (@read $file "\x00") |$result
+  (@delete $file)
+  $result
+> "WORD 1")
       (@throws <
   "/tmp" |$directory
   catch \ (@query "TMPDIR") |$directory /
-  (@merge $directory "/lngrd.txt") |$file
-  (@write $file "text")
+  (@merge $directory "/read.txt") |$file
+  (@write $file "TEXT FILE")
   (@delete $file)
   (@read $file "")
 > "absent file")
+      (@throws <(@read "" "XXX")> "damaged argument")
       (@throws <(@read 3 "")> "absent file")
       (@throws <(@read "" "")> "absent file")
       (@throws <(@read)> "absent argument")
@@ -799,12 +874,21 @@ catch
       (@returns <
   "/tmp" |$directory
   catch \ (@query "TMPDIR") |$directory /
-  (@merge $directory "/lngrd.txt") |$file
-  (@write $file "text")
-  (@read $file "") |$text
+  (@merge $directory "/write.txt") |$file
+  (@write $file "FIRST")
+  (@write $file "LAST")
+  (@read $file "") |$result
   (@delete $file)
-  $text
-> "text")
+  $result
+> "LAST")
+      (@returns <
+  "/tmp" |$directory
+  catch \ (@query "TMPDIR") |$directory /
+  (@merge $directory "/write.txt") |$file
+  (@write $file "TEXT FILE") |$result
+  (@delete $file)
+  $result
+> "")
       (@throws <(@write 3 "")> "absent file")
       (@throws <(@write "" "")> "absent file")
       (@throws <(@write)> "absent argument")
@@ -819,10 +903,17 @@ catch
 
     if @persistence
     \
+      (@returns <
+  "/tmp" |$directory
+  catch \ (@query "TMPDIR") |$directory /
+  (@merge $directory "/delete.txt") |$file
+  (@write $file "TEXT FILE")
+  (@delete $file)
+> "")
       (@throws <
   "/tmp" |$directory
   catch \ (@query "TMPDIR") |$directory /
-  (@merge $directory "/lngrd.txt") |$file
+  (@merge $directory "/delete.txt") |$file
   (@write $file "text")
   (@delete $file)
   (@delete $file)
