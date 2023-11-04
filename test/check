@@ -164,6 +164,8 @@ catch
     (@returns <-2147483647> -2147483647)
     (@returns <+2147483647> 2147483647)
     (@returns <000000000000000000000000000000000000000000000000002147483647> 2147483647)
+    (@mistakes "-")
+    (@mistakes "+")
     (@mistakes "2147483648")
     (@mistakes "-2147483648")
     (@mistakes "+2147483648")
@@ -185,6 +187,7 @@ catch
     (@returns <"\x74\x65\x78\x74"> "text")
     (@returns <"\x7c123\x7c"> "|123|")
     (@returns <"\x7cabc\x7c"> "|abc|")
+    (@mistakes "\"")
     (@mistakes "\"\\xFF\"")
     (@mistakes "\"\\z\"")
     (@mistakes "\"\\x\"")
@@ -223,6 +226,8 @@ catch
     (@returns <@serialize> <(@serialize argument 1)>)
     (@returns <@deserialize> <(@deserialize argument 1)>)
     (@returns <@type> <(@type argument 1)>)
+    (@mistakes "<")
+    (@mistakes ">")
   /
 
   \
