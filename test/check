@@ -1023,6 +1023,39 @@ catch
   /
 
   \
+    "built-in/evaluate" |@suite
+
+    (@returns <(@evaluate "")> "")
+    (@returns <(@evaluate "#comment")> "")
+    (@returns <(@evaluate "@write")> @write)
+    (@returns <(@evaluate "if 0 1")> "")
+    (@returns <(@evaluate "0")> 0)
+    (@returns <(@evaluate "\"\"")> "")
+    (@returns <(@evaluate "<>")> <>)
+    (@returns <(@evaluate "1 |$l 2 |$r (@add $l $r)")> 3)
+    (@returns <(@evaluate "1") (@evaluate "2") (@evaluate "3")> 3)
+    (@returns <"x" |$variable (@evaluate "$variable") $variable> "x")
+    (@returns <(@evaluate "\"x\" |$variable") $variable> "x")
+    (@returns <(<(@evaluate "argument 1")> "a" "b" "c")> "a")
+    (@returns <(<(@evaluate "argument 2")> "a" "b" "c")> "b")
+    (@returns <(<(@evaluate "argument 3")> "a" "b" "c")> "c")
+    (@returns <(<(@evaluate "(@evaluate \"1\") 2 3")>)> 3)
+    (@returns <(<(@evaluate "1 (@evaluate \"2\") 3")>)> 3)
+    (@returns <(<(@evaluate "1 2 (@evaluate \"3\")")>)> 3)
+    (@returns <(<(@evaluate "(@evaluate \"argument 1\") argument 2 argument 3")> "a" "b" "c")> "c")
+    (@returns <(<(@evaluate "argument 1 (@evaluate \"argument 2\") argument 3")> "a" "b" "c")> "c")
+    (@returns <(<(@evaluate "argument 1 argument 2 (@evaluate \"argument 3\")")> "a" "b" "c")> "c")
+    (@throws <(@evaluate "throw \"error\"")> "error")
+    (@throws <(@evaluate "\"")> "lex error")
+    (@throws <(@evaluate "-1 +2 *3 /4")> "lex error")
+    (@throws <(@evaluate "if")> "parse error")
+    (@throws <(<(@evaluate "argument 4")> "a" "b" "c")> "absent argument")
+    (@throws <(@evaluate)> "absent argument")
+    (@throws <(@evaluate 0)> "alien argument")
+    (@throws <(@evaluate <>)> "alien argument")
+  /
+
+  \
     "misc" |@suite
 
     (@returns <> "")

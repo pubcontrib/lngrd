@@ -55,4 +55,4 @@
     # built-ins
     @add @subtract @multiply @divide @modulo @increment @decrement @and @or @not
     @precedes @succeeds @equals @length @slice @merge @read @write @delete
-    @query @exit @serialize @deserialize @type
+    @query @exit @serialize @deserialize @type @evaluate

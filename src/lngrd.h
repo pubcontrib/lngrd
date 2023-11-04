@@ -211,6 +211,7 @@ typedef struct
     lngrd_UInt phase;
     lngrd_UInt checkpoint;
     lngrd_UInt capacity;
+    lngrd_SInt provisioned;
 } lngrd_Action;
 
 /*action dynamic array*/
@@ -386,6 +387,7 @@ static void do_exit_work(lngrd_Executer *executer, const lngrd_List *arguments, 
 static void do_serialize_work(lngrd_Executer *executer, const lngrd_List *arguments, lngrd_UInt capacity);
 static void do_deserialize_work(lngrd_Executer *executer, const lngrd_List *arguments, lngrd_UInt capacity);
 static void do_type_work(lngrd_Executer *executer, const lngrd_List *arguments, lngrd_UInt capacity);
+static void do_evaluate_work(lngrd_Executer *executer, const lngrd_List *arguments, lngrd_UInt capacity);
 static void set_global_function(const char *name, const char *source, void (*work)(lngrd_Executer *, const lngrd_List *, lngrd_UInt), lngrd_Executer *executer);
 static void set_executer_error(const char *message, lngrd_Executer *executer);
 static void set_executor_result(lngrd_Block *result, lngrd_Executer *executer);
@@ -1099,6 +1101,7 @@ LNGRD_API void lngrd_start_executer(lngrd_Executer *executer)
     set_global_function("serialize", "<(@serialize argument 1)>", do_serialize_work, executer);
     set_global_function("deserialize", "<(@deserialize argument 1)>", do_deserialize_work, executer);
     set_global_function("type", "<(@type argument 1)>", do_type_work, executer);
+    set_global_function("evaluate", "<(@evaluate argument 1)>", do_evaluate_work, executer);
 
     push_list_item(executer->locals, create_block(LNGRD_BLOCK_TYPE_MAP, create_map(), 1));
 }
@@ -1273,7 +1276,7 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
                         push_list_item(pyre, pop_list_item(arguments));
                     }
 
-                    if (action->phase > form->arguments->length)
+                    if (action->phase > form->arguments->length && action->provisioned)
                     {
                         if (peek_list_item(locals))
                         {
@@ -1337,9 +1340,19 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
                     }
 
                     function = (lngrd_Function *) first->data;
-                    checkpoint = function->inlined ? action->checkpoint : executer->arguments->length;
 
-                    push_list_item(locals, NULL);
+                    if (function->inlined)
+                    {
+                        checkpoint = action->checkpoint;
+                        action->provisioned = 0;
+                    }
+                    else
+                    {
+                        checkpoint = executer->arguments->length;
+                        action->provisioned = 1;
+                        push_list_item(locals, NULL);
+                    }
+
                     push_plan_action(plan, create_action(function->expressions, 0, 0, 0, checkpoint, action->phase));
                     action->phase += 1;
                     sustain = 1;
@@ -3428,6 +3441,76 @@ static void do_type_work(lngrd_Executer *executer, const lngrd_List *arguments, 
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, cstring_to_string(type), 0), executer);
 }
 
+static void do_evaluate_work(lngrd_Executer *executer, const lngrd_List *arguments, lngrd_UInt capacity)
+{
+    lngrd_Block *code;
+    lngrd_String *c;
+    lngrd_Parser parser;
+    lngrd_Lexer lexer;
+    lngrd_List *expressions;
+    lngrd_Action *native, *invoke;
+    char *error;
+
+    if (capacity < 2)
+    {
+        set_executer_error("absent argument", executer);
+        return;
+    }
+
+    code = arguments->items[arguments->length - capacity + 1];
+
+    if (code->type != LNGRD_BLOCK_TYPE_STRING)
+    {
+        set_executer_error("alien argument", executer);
+        return;
+    }
+
+    c = (lngrd_String *) code->data;
+
+    lngrd_start_lexer(&lexer, c);
+    lngrd_start_parser(&parser, &lexer);
+
+    expressions = create_list();
+
+    while (!parser.closed && !parser.errored)
+    {
+        lngrd_progress_parser(&parser);
+
+        if (!parser.closed && !parser.errored)
+        {
+            push_list_item(expressions, parser.expression);
+            parser.expression = NULL;
+        }
+    }
+
+    error = NULL;
+
+    if (lexer.errored)
+    {
+        error = (char *) "lex error";
+    }
+    else if (parser.errored)
+    {
+        error = (char *) "parse error";
+    }
+
+    lngrd_stop_parser(&parser);
+
+    if (error)
+    {
+        burn_list(expressions, executer->pyre);
+        set_executer_error(error, executer);
+        return;
+    }
+
+    native = pop_plan_action(executer->plan);
+    invoke = peek_plan_action(executer->plan);
+    push_plan_action(executer->plan, create_action(expressions, 0, LNGRD_ACTION_OWN_ITEMS | LNGRD_ACTION_OWN_LIST, 0, invoke->checkpoint, invoke->capacity));
+    push_plan_action(executer->plan, native);
+
+    set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, cstring_to_string(""), 0), executer);
+}
+
 static void set_global_function(const char *name, const char *source, void (*work)(lngrd_Executer *, const lngrd_List *, lngrd_UInt), lngrd_Executer *executer)
 {
     lngrd_NativeForm *form;
@@ -4382,6 +4465,7 @@ static lngrd_Action *create_action(lngrd_List *expressions, size_t index, lngrd_
     action->phase = phase;
     action->checkpoint = checkpoint;
     action->capacity = capacity;
+    action->provisioned = 0;
 
     return action;
 }
