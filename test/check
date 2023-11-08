@@ -122,7 +122,7 @@ catch
   argument 1 |$source
 
   0 |$clear
-  catch \ (@deserialize $source) |$returned 1 |$clear / |$thrown
+  catch \ (@evaluate $source) |$returned 1 |$clear / |$thrown
 
   if $clear
   \
@@ -134,7 +134,7 @@ catch
     (@exit 1)
   /
 
-  "codec error" |$expected
+  "lex error" |$expected
 
   if (@not (@equals $thrown $expected))
   \
@@ -146,7 +146,37 @@ catch
     (@writeDetail "Expected" (@serialize $expected))
     (@exit 1)
   /
-> |@mistakes
+> |@lexFails
+
+<
+  argument 1 |$source
+
+  0 |$clear
+  catch \ (@evaluate $source) |$returned 1 |$clear / |$thrown
+
+  if $clear
+  \
+    (@writeStatus "FAIL" 31)
+    (@writeDetail "Reason" "an expected error was not thrown")
+    (@writeDetail "Suite" @suite)
+    (@writeDetail "Source" (@serialize $source))
+    (@writeDetail "Returned" (@serialize $returned))
+    (@exit 1)
+  /
+
+  "parse error" |$expected
+
+  if (@not (@equals $thrown $expected))
+  \
+    (@writeStatus "FAIL" 31)
+    (@writeDetail "Reason" "an unexpected error was thrown")
+    (@writeDetail "Suite" @suite)
+    (@writeDetail "Source" (@serialize $source))
+    (@writeDetail "Actual" (@serialize $thrown))
+    (@writeDetail "Expected" (@serialize $expected))
+    (@exit 1)
+  /
+> |@parseFails
 
 catch
 \
@@ -164,13 +194,13 @@ catch
     (@returns <-2147483647> -2147483647)
     (@returns <+2147483647> 2147483647)
     (@returns <000000000000000000000000000000000000000000000000002147483647> 2147483647)
-    (@mistakes "-")
-    (@mistakes "+")
-    (@mistakes "2147483648")
-    (@mistakes "-2147483648")
-    (@mistakes "+2147483648")
-    (@mistakes "--100")
-    (@mistakes "++100")
+    (@lexFails "-")
+    (@lexFails "+")
+    (@parseFails "2147483648")
+    (@parseFails "-2147483648")
+    (@parseFails "+2147483648")
+    (@lexFails "--100")
+    (@lexFails "++100")
   /
 
   \
@@ -187,13 +217,13 @@ catch
     (@returns <"\x74\x65\x78\x74"> "text")
     (@returns <"\x7c123\x7c"> "|123|")
     (@returns <"\x7cabc\x7c"> "|abc|")
-    (@mistakes "\"")
-    (@mistakes "\"\\xFF\"")
-    (@mistakes "\"\\z\"")
-    (@mistakes "\"\\x\"")
-    (@mistakes "\"\\x0\"")
-    (@mistakes "\"\\x0z\"")
-    (@mistakes "\"\\xz0\"")
+    (@lexFails "\"")
+    (@parseFails "\"\\xFF\"")
+    (@parseFails "\"\\z\"")
+    (@parseFails "\"\\x\"")
+    (@parseFails "\"\\x0\"")
+    (@parseFails "\"\\x0z\"")
+    (@parseFails "\"\\xz0\"")
   /
 
   \
@@ -226,8 +256,8 @@ catch
     (@returns <@serialize> <(@serialize argument 1)>)
     (@returns <@deserialize> <(@deserialize argument 1)>)
     (@returns <@type> <(@type argument 1)>)
-    (@mistakes "<")
-    (@mistakes ">")
+    (@parseFails "<")
+    (@parseFails ">")
   /
 
   \
@@ -253,10 +283,10 @@ catch
     (@returns <"x" |$0 |$0 |$0 |$0 |$0 |$0 |$0 |$0 |$0 |$0 $0> "x")
     (@returns <0 |$0 1 |$1 2 |$2 3 |$3 4 |$4 5 |$5 6 |$6 7 |$7 8 |$8 9 |$9 $0> 0)
     (@returns <0 |$0 1 |$1 2 |$2 3 |$3 4 |$4 5 |$5 6 |$6 7 |$7 8 |$8 9 |$9 $9> 9)
-    (@mistakes "@")
-    (@mistakes "@\"\\z\"")
-    (@mistakes "|@\"\\z\"")
-    (@mistakes "%@\"\\z\"")
+    (@lexFails "@")
+    (@parseFails "@\"\\z\"")
+    (@parseFails "|@\"\\z\"")
+    (@parseFails "%@\"\\z\"")
   /
 
   \
@@ -276,9 +306,9 @@ catch
     (@returns <"text" |$"" $""> "text")
     (@returns <"text" |$"\"special\"" $"\"special\""> "text")
     (@returns <@add |$saved <"x"> |@add (@add) |$result $saved |@add $result> "x")
-    (@mistakes "|")
-    (@mistakes "@|")
-    (@mistakes "|@")
+    (@lexFails "|")
+    (@lexFails "@|")
+    (@lexFails "|@")
   /
 
   \
@@ -338,8 +368,8 @@ catch
     (@returns <if "1" if "" "x"> "")
     (@returns <if "" if "2" "x"> "")
     (@returns <if "" if "" "x"> "")
-    (@mistakes "if")
-    (@mistakes "if \"\"")
+    (@parseFails "if")
+    (@parseFails "if \"\"")
   /
 
   \
@@ -363,8 +393,8 @@ catch
     (@returns <"x" |$test while $test \ "" |$test / $test> "")
     (@returns <0 |$i while (@precedes $i 100) \ (@add $i 1) |$i /> "")
     (@returns <0 |$i while (@precedes $i 100) \ (@add $i 1) |$i / $i> 100)
-    (@mistakes "while")
-    (@mistakes "while \"\"")
+    (@parseFails "while")
+    (@parseFails "while \"\"")
   /
 
   \
@@ -375,7 +405,7 @@ catch
     (@returns <catch \ "" /> "")
     (@returns <catch \ <> /> "")
     (@returns <catch \ $missing /> "absent variable")
-    (@mistakes "catch")
+    (@parseFails "catch")
   /
 
   \
@@ -388,7 +418,7 @@ catch
     (@returns <catch \ throw "error" /> "error")
     (@returns <(catch \ throw @add / 0 1)> 1)
     (@throws <throw throw "error"> "error")
-    (@mistakes "throw")
+    (@parseFails "throw")
   /
 
   \
@@ -428,8 +458,8 @@ catch
     (@returns <\ /> "")
     (@returns <\ "a" /> "a")
     (@returns <\ "a" "b" "c" /> "c")
-    (@mistakes "\\")
-    (@mistakes "/")
+    (@parseFails "\\")
+    (@parseFails "/")
   /
 
   \
@@ -1074,7 +1104,7 @@ catch
     (@returns <(@add,1,2)> 3)
     (@returns <if,1,"x"> "x")
     (@returns <if (@equals \1,2,3/ 3) "x"> "x")
-    (@mistakes "junk")
+    (@lexFails "junk")
   /
 / |$error
 
