@@ -386,7 +386,7 @@ static void do_query_work(lngrd_Executer *executer, const lngrd_List *arguments,
 static void do_exit_work(lngrd_Executer *executer, const lngrd_List *arguments, lngrd_UInt capacity);
 static void do_serialize_work(lngrd_Executer *executer, const lngrd_List *arguments, lngrd_UInt capacity);
 static void do_deserialize_work(lngrd_Executer *executer, const lngrd_List *arguments, lngrd_UInt capacity);
-static void do_type_work(lngrd_Executer *executer, const lngrd_List *arguments, lngrd_UInt capacity);
+static void do_classify_work(lngrd_Executer *executer, const lngrd_List *arguments, lngrd_UInt capacity);
 static void do_evaluate_work(lngrd_Executer *executer, const lngrd_List *arguments, lngrd_UInt capacity);
 static void set_global_function(const char *name, const char *source, void (*work)(lngrd_Executer *, const lngrd_List *, lngrd_UInt), lngrd_Executer *executer);
 static void set_executer_error(const char *message, lngrd_Executer *executer);
@@ -1100,7 +1100,7 @@ LNGRD_API void lngrd_start_executer(lngrd_Executer *executer)
     set_global_function("exit", "<(@exit argument 1)>", do_exit_work, executer);
     set_global_function("serialize", "<(@serialize argument 1)>", do_serialize_work, executer);
     set_global_function("deserialize", "<(@deserialize argument 1)>", do_deserialize_work, executer);
-    set_global_function("type", "<(@type argument 1)>", do_type_work, executer);
+    set_global_function("classify", "<(@classify argument 1)>", do_classify_work, executer);
     set_global_function("evaluate", "<(@evaluate argument 1)>", do_evaluate_work, executer);
 
     push_list_item(executer->locals, create_block(LNGRD_BLOCK_TYPE_MAP, create_map(), 1));
@@ -3398,7 +3398,7 @@ static void do_deserialize_work(lngrd_Executer *executer, const lngrd_List *argu
     set_executor_result(value, executer);
 }
 
-static void do_type_work(lngrd_Executer *executer, const lngrd_List *arguments, lngrd_UInt capacity)
+static void do_classify_work(lngrd_Executer *executer, const lngrd_List *arguments, lngrd_UInt capacity)
 {
     lngrd_Block *value;
     char *type;

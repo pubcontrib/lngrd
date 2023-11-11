@@ -255,7 +255,7 @@ catch
     (@returns <@exit> <(@exit argument 1)>)
     (@returns <@serialize> <(@serialize argument 1)>)
     (@returns <@deserialize> <(@deserialize argument 1)>)
-    (@returns <@type> <(@type argument 1)>)
+    (@returns <@classify> <(@classify argument 1)>)
     (@parseFails "<")
     (@parseFails ">")
   /
@@ -973,7 +973,7 @@ catch
   \
     "built-in/query" |@suite
 
-    (@returns <(@type (@query "TERM"))> "string")
+    (@returns <(@classify (@query "TERM"))> "string")
     (@returns <(@equals (@length (@query "TERM")) 0)> 0)
     (@throws <(@query "__absent__")> "absent environment variable")
     (@throws <(@query)> "absent argument")
@@ -1032,7 +1032,7 @@ catch
     (@returns <(@serialize @exit)> "<(@exit argument 1)>")
     (@returns <(@serialize @serialize)> "<(@serialize argument 1)>")
     (@returns <(@serialize @deserialize)> "<(@deserialize argument 1)>")
-    (@returns <(@serialize @type)> "<(@type argument 1)>")
+    (@returns <(@serialize @classify)> "<(@classify argument 1)>")
   /
 
   \
@@ -1049,12 +1049,12 @@ catch
   /
 
   \
-    "built-in/type" |@suite
+    "built-in/classify" |@suite
 
-    (@returns <(@type 0)> "number")
-    (@returns <(@type "")> "string")
-    (@returns <(@type <>)> "function")
-    (@throws <(@type)> "absent argument")
+    (@returns <(@classify 0)> "number")
+    (@returns <(@classify "")> "string")
+    (@returns <(@classify <>)> "function")
+    (@throws <(@classify)> "absent argument")
   /
 
   \
