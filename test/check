@@ -208,10 +208,10 @@ catch
 
     (@returns <""> "")
     (@returns <"text"> "text")
-    (@returns <(@length "\\\"\t\r\n")> 5)
-    (@returns <(@length "\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f")> 16)
-    (@returns <(@length "\x00\x10\x20\x30\x40\x50\x60\x70\x80\x90\xa0\xb0\xc0\xd0\xe0\xf0")> 16)
-    (@returns <(@length "\x00\x11\x22\x33\x44\x55\x66\x77\x88\x99\xaa\xbb\xcc\xdd\xee\xff")> 16)
+    (@returns <(@measure "\\\"\t\r\n")> 5)
+    (@returns <(@measure "\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f")> 16)
+    (@returns <(@measure "\x00\x10\x20\x30\x40\x50\x60\x70\x80\x90\xa0\xb0\xc0\xd0\xe0\xf0")> 16)
+    (@returns <(@measure "\x00\x11\x22\x33\x44\x55\x66\x77\x88\x99\xaa\xbb\xcc\xdd\xee\xff")> 16)
     (@returns <"line 1\nline 2\nline 3"> "line 1\nline 2\nline 3")
     (@returns <"line 1\x0aline 2\x0aline 3"> "line 1\nline 2\nline 3")
     (@returns <"\x74\x65\x78\x74"> "text")
@@ -245,7 +245,7 @@ catch
     (@returns <@precedes> <(@precedes argument 1 argument 2)>)
     (@returns <@succeeds> <(@succeeds argument 1 argument 2)>)
     (@returns <@equals> <(@equals argument 1 argument 2)>)
-    (@returns <@length> <(@length argument 1)>)
+    (@returns <@measure> <(@measure argument 1)>)
     (@returns <@slice> <(@slice argument 1 argument 2 argument 3)>)
     (@returns <@merge> <(@merge argument 1 argument 2)>)
     (@returns <@read> <(@read argument 1 argument 2)>)
@@ -752,15 +752,15 @@ catch
   /
 
   \
-    "built-in/length" |@suite
+    "built-in/measure" |@suite
 
-    (@returns <(@length "")> 0)
-    (@returns <(@length "1")> 1)
-    (@returns <(@length " ")> 1)
-    (@returns <(@length "123")> 3)
-    (@throws <(@length)> "absent argument")
-    (@throws <(@length 0)> "alien argument")
-    (@throws <(@length <>)> "alien argument")
+    (@returns <(@measure "")> 0)
+    (@returns <(@measure "1")> 1)
+    (@returns <(@measure " ")> 1)
+    (@returns <(@measure "123")> 3)
+    (@throws <(@measure)> "absent argument")
+    (@throws <(@measure 0)> "alien argument")
+    (@throws <(@measure <>)> "alien argument")
   /
 
   \
@@ -974,7 +974,7 @@ catch
     "built-in/query" |@suite
 
     (@returns <(@classify (@query "TERM"))> "string")
-    (@returns <(@equals (@length (@query "TERM")) 0)> 0)
+    (@returns <(@equals (@measure (@query "TERM")) 0)> 0)
     (@throws <(@query "__absent__")> "absent environment variable")
     (@throws <(@query)> "absent argument")
     (@throws <(@query 0)> "alien argument")
@@ -1022,7 +1022,7 @@ catch
     (@returns <(@serialize @precedes)> "<(@precedes argument 1 argument 2)>")
     (@returns <(@serialize @succeeds)> "<(@succeeds argument 1 argument 2)>")
     (@returns <(@serialize @equals)> "<(@equals argument 1 argument 2)>")
-    (@returns <(@serialize @length)> "<(@length argument 1)>")
+    (@returns <(@serialize @measure)> "<(@measure argument 1)>")
     (@returns <(@serialize @slice)> "<(@slice argument 1 argument 2 argument 3)>")
     (@returns <(@serialize @merge)> "<(@merge argument 1 argument 2)>")
     (@returns <(@serialize @read)> "<(@read argument 1 argument 2)>")

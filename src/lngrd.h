@@ -376,7 +376,7 @@ static void do_not_work(lngrd_Executer *executer, const lngrd_List *arguments, l
 static void do_precedes_work(lngrd_Executer *executer, const lngrd_List *arguments, lngrd_UInt capacity);
 static void do_succeeds_work(lngrd_Executer *executer, const lngrd_List *arguments, lngrd_UInt capacity);
 static void do_equals_work(lngrd_Executer *executer, const lngrd_List *arguments, lngrd_UInt capacity);
-static void do_length_work(lngrd_Executer *executer, const lngrd_List *arguments, lngrd_UInt capacity);
+static void do_measure_work(lngrd_Executer *executer, const lngrd_List *arguments, lngrd_UInt capacity);
 static void do_slice_work(lngrd_Executer *executer, const lngrd_List *arguments, lngrd_UInt capacity);
 static void do_merge_work(lngrd_Executer *executer, const lngrd_List *arguments, lngrd_UInt capacity);
 static void do_read_work(lngrd_Executer *executer, const lngrd_List *arguments, lngrd_UInt capacity);
@@ -1090,7 +1090,7 @@ LNGRD_API void lngrd_start_executer(lngrd_Executer *executer)
     set_global_function("precedes", "<(@precedes argument 1 argument 2)>", do_precedes_work, executer);
     set_global_function("succeeds", "<(@succeeds argument 1 argument 2)>", do_succeeds_work, executer);
     set_global_function("equals", "<(@equals argument 1 argument 2)>", do_equals_work, executer);
-    set_global_function("length", "<(@length argument 1)>", do_length_work, executer);
+    set_global_function("measure", "<(@measure argument 1)>", do_measure_work, executer);
     set_global_function("slice", "<(@slice argument 1 argument 2 argument 3)>", do_slice_work, executer);
     set_global_function("merge", "<(@merge argument 1 argument 2)>", do_merge_work, executer);
     set_global_function("read", "<(@read argument 1 argument 2)>", do_read_work, executer);
@@ -2724,7 +2724,7 @@ static void do_equals_work(lngrd_Executer *executer, const lngrd_List *arguments
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, compare_blocks(left, right) == 0), 0), executer);
 }
 
-static void do_length_work(lngrd_Executer *executer, const lngrd_List *arguments, lngrd_UInt capacity)
+static void do_measure_work(lngrd_Executer *executer, const lngrd_List *arguments, lngrd_UInt capacity)
 {
     lngrd_Block *value;
     size_t length;
