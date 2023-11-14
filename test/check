@@ -465,9 +465,15 @@ catch
   \
     "built-in/add" |@suite
 
+    (@returns <(@add 25 75)> 100)
+    (@returns <(@add 75 25)> 100)
     (@returns <(@add 0 0)> 0)
     (@returns <(@add 0 1)> 1)
+    (@returns <(@add 1 0)> 1)
+    (@returns <(@add 1 1)> 2)
+    (@returns <(@add -1 -1)> -2)
     (@returns <(@add -1 1)> 0)
+    (@returns <(@add 1 -1)> 0)
     (@returns <(@add 2147483647 0)> 2147483647)
     (@returns <(@add -2147483647 0)> -2147483647)
     (@throws <(@add 2147483647 1)> "arithmetic error")
@@ -487,9 +493,15 @@ catch
   \
     "built-in/subtract" |@suite
 
+    (@returns <(@subtract 400 500)> -100)
+    (@returns <(@subtract 500 400)> 100)
     (@returns <(@subtract 0 0)> 0)
-    (@returns <(@subtract 0 -1)> 1)
+    (@returns <(@subtract 0 1)> -1)
+    (@returns <(@subtract 1 0)> 1)
+    (@returns <(@subtract 1 1)> 0)
     (@returns <(@subtract -1 -1)> 0)
+    (@returns <(@subtract -1 1)> -2)
+    (@returns <(@subtract 1 -1)> 2)
     (@returns <(@subtract 2147483647 0)> 2147483647)
     (@returns <(@subtract -2147483647 0)> -2147483647)
     (@throws <(@subtract 2147483647 -1)> "arithmetic error")
@@ -509,9 +521,15 @@ catch
   \
     "built-in/multiply" |@suite
 
+    (@returns <(@multiply 5 20)> 100)
+    (@returns <(@multiply 20 5)> 100)
     (@returns <(@multiply 0 0)> 0)
-    (@returns <(@multiply 1 1)> 1)
+    (@returns <(@multiply 0 1)> 0)
     (@returns <(@multiply 1 0)> 0)
+    (@returns <(@multiply 1 1)> 1)
+    (@returns <(@multiply -1 -1)> 1)
+    (@returns <(@multiply -1 1)> -1)
+    (@returns <(@multiply 1 -1)> -1)
     (@returns <(@multiply 2147483647 1)> 2147483647)
     (@returns <(@multiply -2147483647 1)> -2147483647)
     (@throws <(@multiply 2147483647 2)> "arithmetic error")
@@ -537,17 +555,21 @@ catch
   \
     "built-in/divide" |@suite
 
+    (@returns <(@divide 4 400)> 0)
+    (@returns <(@divide 400 4)> 100)
+    (@throws <(@divide 0 0)> "arithmetic error")
     (@returns <(@divide 0 1)> 0)
+    (@throws <(@divide 1 0)> "arithmetic error")
     (@returns <(@divide 1 1)> 1)
-    (@returns <(@divide 1 4)> 0)
+    (@returns <(@divide -1 -1)> 1)
+    (@returns <(@divide -1 1)> -1)
+    (@returns <(@divide 1 -1)> -1)
     (@returns <(@divide 2147483647 1)> 2147483647)
     (@returns <(@divide -2147483647 1)> -2147483647)
     (@returns <(@divide 2147483647 2147483647)> 1)
     (@returns <(@divide 2147483647 -2147483647)> -1)
     (@returns <(@divide -2147483647 2147483647)> -1)
     (@returns <(@divide -2147483647 -2147483647)> 1)
-    (@throws <(@divide 1 0)> "arithmetic error")
-    (@throws <(@divide -1 0)> "arithmetic error")
     (@throws <(@divide)> "absent argument")
     (@throws <(@divide 0)> "absent argument")
     (@throws <(@divide "" 0)> "alien argument")
@@ -559,15 +581,20 @@ catch
   \
     "built-in/modulo" |@suite
 
-    (@returns <(@modulo 1 1)> 0)
+    (@returns <(@modulo 900 1000)> 900)
+    (@returns <(@modulo 1000 900)> 100)
     (@returns <(@modulo 5 2)> 1)
+    (@throws <(@modulo 0 0)> "arithmetic error")
     (@returns <(@modulo 0 1)> 0)
+    (@throws <(@modulo 1 0)> "arithmetic error")
+    (@returns <(@modulo 1 1)> 0)
+    (@returns <(@modulo -1 -1)> 0)
+    (@returns <(@modulo -1 1)> 0)
+    (@returns <(@modulo 1 -1)> 0)
     (@returns <(@modulo 2147483647 2147483647)> 0)
     (@returns <(@modulo 2147483647 -2147483647)> 0)
     (@returns <(@modulo -2147483647 2147483647)> 0)
     (@returns <(@modulo -2147483647 -2147483647)> 0)
-    (@throws <(@modulo 1 0)> "arithmetic error")
-    (@throws <(@modulo -1 0)> "arithmetic error")
     (@throws <(@modulo)> "absent argument")
     (@throws <(@modulo 0)> "absent argument")
     (@throws <(@modulo "" 0)> "alien argument")
@@ -581,6 +608,7 @@ catch
 
     (@returns <(@increment -1)> 0)
     (@returns <(@increment 0)> 1)
+    (@returns <(@increment 1)> 2)
     (@returns <(@increment 2147483646)> 2147483647)
     (@throws <(@increment 2147483647)> "arithmetic error")
     (@throws <(@increment)> "absent argument")
@@ -591,8 +619,9 @@ catch
   \
     "built-in/decrement" |@suite
 
-    (@returns <(@decrement 1)> 0)
+    (@returns <(@decrement -1)> -2)
     (@returns <(@decrement 0)> -1)
+    (@returns <(@decrement 1)> 0)
     (@returns <(@decrement -2147483646)> -2147483647)
     (@throws <(@decrement -2147483647)> "arithmetic error")
     (@throws <(@decrement)> "absent argument")
