@@ -283,10 +283,11 @@ catch
     (@returns <"x" |$0 |$0 |$0 |$0 |$0 |$0 |$0 |$0 |$0 |$0 $0> "x")
     (@returns <0 |$0 1 |$1 2 |$2 3 |$3 4 |$4 5 |$5 6 |$6 7 |$7 8 |$8 9 |$9 $0> 0)
     (@returns <0 |$0 1 |$1 2 |$2 3 |$3 4 |$4 5 |$5 6 |$6 7 |$7 8 |$8 9 |$9 $9> 9)
-    (@lexFails "@")
-    (@parseFails "@\"\\z\"")
-    (@parseFails "|@\"\\z\"")
-    (@parseFails "%@\"\\z\"")
+    (@lexFails "$")
+    (@lexFails "$\"variable")
+    (@parseFails "$\"\\z\"")
+    (@parseFails "|$\"\\z\"")
+    (@parseFails "%$\"\\z\"")
   /
 
   \
@@ -307,8 +308,12 @@ catch
     (@returns <"text" |$"\"special\"" $"\"special\""> "text")
     (@returns <@add |$saved <"x"> |@add (@add) |$result $saved |@add $result> "x")
     (@lexFails "|")
-    (@lexFails "@|")
-    (@lexFails "|@")
+    (@lexFails "|variable")
+    (@lexFails "|\"variable\"")
+    (@lexFails "|\"variable")
+    (@lexFails "|$")
+    (@lexFails "|$\"variable")
+    (@lexFails "|!variable")
   /
 
   \
@@ -320,6 +325,13 @@ catch
     (@returns <<> |$function %$function> "")
     (@throws <"text" |$variable %$variable $variable> "absent variable")
     (@throws <"text" |$"\"special\"" %$"\"special\"" $"\"special\""> "absent variable")
+    (@lexFails "%")
+    (@lexFails "%variable")
+    (@lexFails "%\"variable\"")
+    (@lexFails "%\"variable")
+    (@lexFails "%$")
+    (@lexFails "%$\"variable")
+    (@lexFails "%!variable")
   /
 
   \
