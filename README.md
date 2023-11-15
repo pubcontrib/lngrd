@@ -24,10 +24,12 @@
     @global
 
     # assign
-    "value" |@variable
+    "value" |$local
+    "value" |@global
 
     # unassign
-    %@variable
+    %$local
+    %@global
 
     # invoke
     (@function "argument 1" "argument ..." "argument n")
