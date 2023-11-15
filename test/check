@@ -306,6 +306,8 @@ catch
     (@returns <"text" |$variable $"variable"> "text")
     (@returns <"text" |$"" $""> "text")
     (@returns <"text" |$"\"special\"" $"\"special\""> "text")
+    (@returns <<> |$add $add> <>)
+    (@returns <<> |$add @add> @add)
     (@returns <@add |$saved <"x"> |@add (@add) |$result $saved |@add $result> "x")
     (@lexFails "|")
     (@lexFails "|variable")
