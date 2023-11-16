@@ -36,6 +36,7 @@
 
     # branch
     if "test" "pass"
+    if "test" "pass" else "fail"
 
     # loop
     while "test" "body"

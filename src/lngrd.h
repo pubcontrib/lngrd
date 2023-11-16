@@ -280,6 +280,7 @@ typedef struct
 {
     lngrd_Block *test;
     lngrd_Block *pass;
+    lngrd_Block *fail;
 } lngrd_BranchForm;
 
 /*loop expression form*/
@@ -613,9 +614,87 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
                 {
                     form->test = offer;
                 }
-                else
+                else if (!form->pass)
                 {
+                    lngrd_Token checkpoint;
+                    int marked;
+
                     form->pass = offer;
+                    checkpoint.type = lexer->token.type;
+                    checkpoint.start = lexer->token.start;
+                    checkpoint.end = lexer->token.end;
+                    marked = 0;
+
+                    while (!lexer->closed && !lexer->errored)
+                    {
+                        lngrd_progress_lexer(lexer);
+
+                        if (!lexer->closed && !lexer->errored)
+                        {
+                            lngrd_Token token;
+                            lngrd_TokenType tokenType;
+
+                            token = lexer->token;
+                            tokenType = token.type;
+
+                            if (tokenType == LNGRD_TOKEN_TYPE_UNKNOWN)
+                            {
+                                parser->errored = 1;
+                                return;
+                            }
+
+                            if (tokenType == LNGRD_TOKEN_TYPE_WHITESPACE || tokenType == LNGRD_TOKEN_TYPE_COMMENT)
+                            {
+                                continue;
+                            }
+
+                            if (tokenType == LNGRD_TOKEN_TYPE_KEYWORD)
+                            {
+                                lngrd_String tokenValue;
+
+                                tokenValue.bytes = lexer->code->bytes + token.start;
+                                tokenValue.length = token.end - token.start;
+
+                                if (is_keyword_match(&tokenValue, "else"))
+                                {
+                                    if (marked)
+                                    {
+                                        parser->errored = 1;
+                                        return;
+                                    }
+
+                                    checkpoint.type = lexer->token.type;
+                                    checkpoint.start = lexer->token.start;
+                                    checkpoint.end = lexer->token.end;
+                                    marked = 1;
+                                    continue;
+                                }
+                            }
+
+                            lexer->token.type = checkpoint.type;
+                            lexer->token.start = checkpoint.start;
+                            lexer->token.end = checkpoint.end;
+                            break;
+                        }
+                    }
+
+                    if (marked)
+                    {
+                        if (lexer->closed)
+                        {
+                            parser->errored = 1;
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        lexer->closed = 0;
+                        completed = 1;
+                    }
+                }
+                else if (!form->fail)
+                {
+                    form->fail = offer;
                     completed = 1;
                 }
             }
@@ -860,6 +939,7 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
                         form = (lngrd_BranchForm *) allocate(1, sizeof(lngrd_BranchForm));
                         form->test = NULL;
                         form->pass = NULL;
+                        form->fail = NULL;
 
                         expression = create_expression(LNGRD_EXPRESSION_TYPE_BRANCH, form);
 
@@ -919,6 +999,11 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
                         push_list_item(stack, create_block(LNGRD_BLOCK_TYPE_EXPRESSION, expression, 1));
 
                         continue;
+                    }
+                    else
+                    {
+                        parser->errored = 1;
+                        return;
                     }
                 }
                 else if (tokenType == LNGRD_TOKEN_TYPE_KEYSYMBOL)
@@ -1396,7 +1481,22 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
                     }
                     else
                     {
-                        set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, cstring_to_string(""), 0), executer);
+                        if (!form->fail)
+                        {
+                            set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, cstring_to_string(""), 0), executer);
+                        }
+                        else
+                        {
+                            lngrd_List *single;
+
+                            single = create_list();
+                            push_list_item(single, form->fail);
+                            push_plan_action(plan, create_action(single, 0, LNGRD_ACTION_OWN_LIST, 0, action->checkpoint, action->capacity));
+                            action->phase = 2;
+                            sustain = 1;
+
+                            break;
+                        }
                     }
                 }
             }
@@ -1779,7 +1879,7 @@ static void read_identifiable_token(lngrd_Lexer *lexer)
 
 static void read_keyword_token(lngrd_Lexer *lexer)
 {
-    static const char *keywords[] = {"if", "while", "catch", "throw", "argument", NULL};
+    static const char *keywords[] = {"if", "else", "while", "catch", "throw", "argument", NULL};
     const char **keyword;
 
     lexer->token.type = LNGRD_TOKEN_TYPE_KEYWORD;
@@ -4314,6 +4414,11 @@ static void burn_expression(lngrd_Expression *expression, lngrd_List *pyre)
             if (form->pass)
             {
                 push_list_item(pyre, form->pass);
+            }
+
+            if (form->fail)
+            {
+                push_list_item(pyre, form->fail);
             }
 
             break;
