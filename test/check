@@ -31,7 +31,7 @@ catch
     (@write @stderr $status)
     (@write @stderr " \x1b[0m\n")
   /
-  if (@not @color)
+  else
   \
     (@write @stderr "[")
     (@write @stderr $status)
@@ -51,7 +51,7 @@ catch
     (@write @stderr $value)
     (@write @stderr "\n")
   /
-  if (@not @color)
+  else
   \
     (@write @stderr $header)
     (@write @stderr ":\n")
