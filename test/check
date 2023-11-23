@@ -510,6 +510,7 @@ catch
     (@throws <(<argument 1> "x") argument 1> "absent argument")
     (@throws <argument ""> "alien argument")
     (@throws <argument <>> "alien argument")
+    (@parseFails "argument")
   /
 
   \
