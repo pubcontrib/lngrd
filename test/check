@@ -368,6 +368,8 @@ catch
     (@returns <"x" |@var (<@var>) @var |$var %@var $var> "x")
     (@returns <(<"x" |@var>) @var |$var %@var $var> "x")
     (@throws <(@write 2 "text" $invalid)> "absent variable")
+    (@parseFails "(")
+    (@parseFails ")")
   /
 
   \
