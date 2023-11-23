@@ -233,6 +233,15 @@ catch
     (@returns <<throw "error">> <throw "error">)
     (@returns <@add> @add)
     (@returns <@add> <(@add argument 1 argument 2)>)
+    (@returns <(@equals <(@add argument 1 argument 2)> <
+  (@add argument 1 argument 2)
+>)> 0)
+    (@returns <(@equals <
+  (@add argument 1 argument 2)
+> <
+  # comment
+  (@add argument 1 argument 2)
+>)> 0)
     (@returns <@subtract> <(@subtract argument 1 argument 2)>)
     (@returns <@multiply> <(@multiply argument 1 argument 2)>)
     (@returns <@divide> <(@divide argument 1 argument 2)>)
