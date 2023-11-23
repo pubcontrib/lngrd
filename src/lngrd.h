@@ -189,6 +189,7 @@ typedef struct
 typedef struct
 {
     lngrd_Lexer *lexer;
+    lngrd_List *pyre;
     lngrd_List *stack;
     lngrd_SInt errored;
     lngrd_SInt closed;
@@ -226,11 +227,11 @@ typedef struct
 typedef struct
 {
     lngrd_Parser *parser;
+    lngrd_List *pyre;
     lngrd_SInt errored;
     lngrd_Plan *plan;
     lngrd_List *arguments;
     lngrd_List *locals;
-    lngrd_List *pyre;
     lngrd_Map *globals;
     lngrd_Block *result;
 } lngrd_Executer;
@@ -327,13 +328,13 @@ LNGRD_API void lngrd_start_lexer(lngrd_Lexer *lexer, const lngrd_String *code);
 /*moves a lexer one step forward on its path*/
 LNGRD_API void lngrd_progress_lexer(lngrd_Lexer *lexer);
 /*initializes a parser*/
-LNGRD_API void lngrd_start_parser(lngrd_Parser *parser, lngrd_Lexer *lexer);
+LNGRD_API void lngrd_start_parser(lngrd_Parser *parser, lngrd_Lexer *lexer, lngrd_List *pyre);
 /*moves a parser one step forward on its path*/
 LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser);
 /*cleans up resources owned by a parser*/
 LNGRD_API void lngrd_stop_parser(lngrd_Parser *parser);
 /*initializes an executer*/
-LNGRD_API void lngrd_start_executer(lngrd_Executer *executer);
+LNGRD_API void lngrd_start_executer(lngrd_Executer *executer, lngrd_List *pyre);
 /*moves an executer forward with a given plan*/
 LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *parser);
 /*cleans up resources owned by an executer*/
@@ -529,9 +530,10 @@ LNGRD_API void lngrd_progress_lexer(lngrd_Lexer *lexer)
     }
 }
 
-LNGRD_API void lngrd_start_parser(lngrd_Parser *parser, lngrd_Lexer *lexer)
+LNGRD_API void lngrd_start_parser(lngrd_Parser *parser, lngrd_Lexer *lexer, lngrd_List *pyre)
 {
     parser->lexer = lexer;
+    parser->pyre = pyre;
     parser->stack = create_list();
     parser->closed = 0;
     parser->errored = 0;
@@ -1130,36 +1132,29 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
 
 LNGRD_API void lngrd_stop_parser(lngrd_Parser *parser)
 {
-    lngrd_List *pyre;
-
-    pyre = create_list();
-
     if (parser->stack)
     {
-        burn_list(parser->stack, pyre);
+        burn_list(parser->stack, parser->pyre);
         parser->stack = NULL;
     }
 
     if (parser->expression)
     {
-        push_list_item(pyre, parser->expression);
+        push_list_item(parser->pyre, parser->expression);
         parser->expression = NULL;
     }
 
-    burn_pyre(pyre);
-
-    free(pyre->items);
-    free(pyre);
+    burn_pyre(parser->pyre);
 }
 
-LNGRD_API void lngrd_start_executer(lngrd_Executer *executer)
+LNGRD_API void lngrd_start_executer(lngrd_Executer *executer, lngrd_List *pyre)
 {
+    executer->pyre = pyre;
     executer->errored = 0;
     executer->globals = create_map();
     executer->plan = create_plan();
     executer->arguments = create_list();
     executer->locals = create_list();
-    executer->pyre = create_list();
     executer->result = create_block(LNGRD_BLOCK_TYPE_STRING, cstring_to_string(""), 1);
 
     set_global_function("add", "<(@add argument 1 argument 2)>", do_add_work, executer);
@@ -1692,28 +1687,17 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
 LNGRD_API void lngrd_stop_executer(lngrd_Executer *executer)
 {
-    lngrd_List *pyre;
+    destroy_plan(executer->plan);
+    burn_list(executer->arguments, executer->pyre);
+    burn_list(executer->locals, executer->pyre);
+    burn_map(executer->globals, executer->pyre);
 
-    pyre = executer->pyre;
-    executer->pyre = NULL;
-
-    if (pyre)
+    if (executer->result)
     {
-        destroy_plan(executer->plan);
-        burn_list(executer->arguments, pyre);
-        burn_list(executer->locals, pyre);
-        burn_map(executer->globals, pyre);
-
-        if (executer->result)
-        {
-            push_list_item(pyre, executer->result);
-        }
-
-        burn_pyre(pyre);
-
-        free(pyre->items);
-        free(pyre);
+        push_list_item(executer->pyre, executer->result);
     }
+
+    burn_pyre(executer->pyre);
 }
 
 static void read_whitespace_token(lngrd_Lexer *lexer)
@@ -3470,7 +3454,7 @@ static void do_deserialize_work(lngrd_Executer *executer, const lngrd_List *argu
     c = (lngrd_String *) code->data;
 
     lngrd_start_lexer(&lexer, c);
-    lngrd_start_parser(&parser, &lexer);
+    lngrd_start_parser(&parser, &lexer, executer->pyre);
     lngrd_progress_parser(&parser);
 
     if (parser.errored || parser.closed)
@@ -3568,7 +3552,7 @@ static void do_evaluate_work(lngrd_Executer *executer, const lngrd_List *argumen
     c = (lngrd_String *) code->data;
 
     lngrd_start_lexer(&lexer, c);
-    lngrd_start_parser(&parser, &lexer);
+    lngrd_start_parser(&parser, &lexer, executer->pyre);
 
     expressions = create_list();
 

@@ -185,6 +185,7 @@ static void run_text(const lngrd_String *code)
     lngrd_Executer executer;
     lngrd_Parser parser;
     lngrd_Lexer lexer;
+    lngrd_List pyre;
 
     if (!lngrd_check_support())
     {
@@ -192,14 +193,18 @@ static void run_text(const lngrd_String *code)
         exit(1);
     }
 
-    lngrd_start_executer(&executer);
+    pyre.length = 0;
+    pyre.capacity = 8;
+    pyre.items = (lngrd_Block **) malloc(pyre.capacity * sizeof(lngrd_Block *));
 
+    lngrd_start_executer(&executer, &pyre);
     lngrd_start_lexer(&lexer, code);
-    lngrd_start_parser(&parser, &lexer);
+    lngrd_start_parser(&parser, &lexer, &pyre);
     lngrd_progress_executer(&executer, &parser);
     lngrd_stop_parser(&parser);
-
     lngrd_stop_executer(&executer);
+
+    free(pyre.items);
 
     if (executer.errored)
     {
