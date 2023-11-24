@@ -1363,6 +1363,16 @@ catch
   /
 
   \
+    "source/unknown-keywords" |@suite
+
+    (@lexFails "junk")
+    (@lexFails "throwing")
+    (@lexFails "bigargument")
+    (@parseFails "ifelse")
+    (@parseFails "elseif")
+  /
+
+  \
     "misc" |@suite
 
     (@returns <> "")
@@ -1372,7 +1382,6 @@ catch
     (@returns <
   #comment
 > "")
-    (@lexFails "junk")
   /
 / |$error
 
