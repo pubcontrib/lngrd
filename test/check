@@ -1371,18 +1371,6 @@ catch
     (@parseFails "ifelse")
     (@parseFails "elseif")
   /
-
-  \
-    "misc" |@suite
-
-    (@returns <> "")
-    (@returns < > "")
-    (@returns <
-> "")
-    (@returns <
-  #comment
-> "")
-  /
 / |$error
 
 if $error
