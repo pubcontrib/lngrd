@@ -180,8 +180,8 @@ typedef struct
 typedef struct
 {
     const lngrd_String *code;
-    lngrd_SInt errored;
     lngrd_SInt closed;
+    lngrd_SInt errored;
     lngrd_Token token;
 } lngrd_Lexer;
 
@@ -190,10 +190,10 @@ typedef struct
 {
     lngrd_Lexer *lexer;
     lngrd_List *pyre;
-    lngrd_List *stack;
-    lngrd_SInt errored;
     lngrd_SInt closed;
+    lngrd_SInt errored;
     lngrd_Block *expression;
+    lngrd_List *stack;
 } lngrd_Parser;
 
 /*memory claim of expression execution iterator internals*/
@@ -226,14 +226,13 @@ typedef struct
 /*executer state machine*/
 typedef struct
 {
-    lngrd_Parser *parser;
     lngrd_List *pyre;
     lngrd_SInt errored;
+    lngrd_Block *result;
+    lngrd_Map *globals;
+    lngrd_List *locals;
     lngrd_Plan *plan;
     lngrd_List *arguments;
-    lngrd_List *locals;
-    lngrd_Map *globals;
-    lngrd_Block *result;
 } lngrd_Executer;
 
 /*literal expression form*/
@@ -459,8 +458,8 @@ LNGRD_API int lngrd_check_support(void)
 LNGRD_API void lngrd_start_lexer(lngrd_Lexer *lexer, const lngrd_String *code)
 {
     lexer->code = code;
-    lexer->errored = 0;
     lexer->closed = 0;
+    lexer->errored = 0;
     lexer->token.type = LNGRD_TOKEN_TYPE_UNKNOWN;
     lexer->token.start = 0;
     lexer->token.end = 0;
@@ -534,10 +533,10 @@ LNGRD_API void lngrd_start_parser(lngrd_Parser *parser, lngrd_Lexer *lexer, lngr
 {
     parser->lexer = lexer;
     parser->pyre = pyre;
-    parser->stack = create_list();
     parser->closed = 0;
     parser->errored = 0;
     parser->expression = NULL;
+    parser->stack = create_list();
 }
 
 LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
@@ -1151,11 +1150,11 @@ LNGRD_API void lngrd_start_executer(lngrd_Executer *executer, lngrd_List *pyre)
 {
     executer->pyre = pyre;
     executer->errored = 0;
+    executer->result = create_block(LNGRD_BLOCK_TYPE_STRING, cstring_to_string(""), 1);
     executer->globals = create_map();
+    executer->locals = create_list();
     executer->plan = create_plan();
     executer->arguments = create_list();
-    executer->locals = create_list();
-    executer->result = create_block(LNGRD_BLOCK_TYPE_STRING, cstring_to_string(""), 1);
 
     set_global_function("add", "<(@add argument 1 argument 2)>", do_add_work, executer);
     set_global_function("subtract", "<(@subtract argument 1 argument 2)>", do_subtract_work, executer);
@@ -1687,15 +1686,15 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
 
 LNGRD_API void lngrd_stop_executer(lngrd_Executer *executer)
 {
-    destroy_plan(executer->plan);
-    burn_list(executer->arguments, executer->pyre);
-    burn_list(executer->locals, executer->pyre);
-    burn_map(executer->globals, executer->pyre);
-
     if (executer->result)
     {
         push_list_item(executer->pyre, executer->result);
     }
+
+    burn_map(executer->globals, executer->pyre);
+    burn_list(executer->locals, executer->pyre);
+    destroy_plan(executer->plan);
+    burn_list(executer->arguments, executer->pyre);
 
     burn_pyre(executer->pyre);
 }
