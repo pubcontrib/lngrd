@@ -1131,16 +1131,11 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
 
 LNGRD_API void lngrd_stop_parser(lngrd_Parser *parser)
 {
-    if (parser->stack)
-    {
-        burn_list(parser->stack, parser->pyre);
-        parser->stack = NULL;
-    }
+    burn_list(parser->stack, parser->pyre);
 
     if (parser->expression)
     {
         push_list_item(parser->pyre, parser->expression);
-        parser->expression = NULL;
     }
 
     burn_pyre(parser->pyre);
