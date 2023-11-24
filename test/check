@@ -1181,6 +1181,25 @@ catch
   /
 
   \
+    "source/token-terminating-symbols" |@suite
+
+    (@returns <(@evaluate " ")> "")
+    (@returns <(@evaluate "\t")> "")
+    (@returns <(@evaluate "\r")> "")
+    (@returns <(@evaluate "\n")> "")
+    (@returns <(@evaluate ",")> "")
+    (@returns <(@evaluate " \t\r\n,")> "")
+    (@returns <(@evaluate "(@add 100 200) ")> 300)
+    (@returns <(@evaluate "(@add\t100\t200)\n")> 300)
+    (@returns <(@evaluate "(@add\r100\r200)\r")> 300)
+    (@returns <(@evaluate "(@add\n100\n200)\n")> 300)
+    (@returns <(@evaluate "(@add\r\n100\r\n200)\r\n")> 300)
+    (@returns <(@evaluate "(@add,100,200)")> 300)
+    (@returns <(@evaluate "(@add, 100, 200)")> 300)
+    (@returns <(@evaluate ",,,(,,,@add,,,100,,,200,,,),,,")> 300)
+  /
+
+  \
     "source/illegal-symbols" |@suite
 
     (@lexFails "\x00")
@@ -1353,10 +1372,6 @@ catch
     (@returns <
   #comment
 > "")
-    (@returns <(@add, 1, 2)> 3)
-    (@returns <(@add,1,2)> 3)
-    (@returns <if,1,"x"> "x")
-    (@returns <if (@equals \1,2,3/ 3) "x"> "x")
     (@lexFails "junk")
   /
 / |$error
