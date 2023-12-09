@@ -2241,6 +2241,12 @@ static int escape_string(const lngrd_String *string, lngrd_String **result)
         }
 
         length = string->length + 2;
+
+        if (length > LNGRD_INT_LIMIT)
+        {
+            return 0;
+        }
+
         bytes = (char *) allocate(length, sizeof(char));
 
         if (string->length > 0)
@@ -2258,6 +2264,12 @@ static int escape_string(const lngrd_String *string, lngrd_String **result)
         }
 
         length = string->length + 2 + escapes;
+
+        if (length > LNGRD_INT_LIMIT)
+        {
+            return 0;
+        }
+
         bytes = (char *) allocate(length, sizeof(char));
 
         for (index = 0, offset = 1; index < string->length; index++)
