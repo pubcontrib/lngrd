@@ -3963,8 +3963,21 @@ static void set_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_Block *block, l
 
         oldItems = map->items;
         oldLength = map->length;
+
+        if (map->capacity < 1073741824L)
+        {
+            map->capacity *= 2;
+        }
+        else if (map->capacity == 1073741824L)
+        {
+            map->capacity = LNGRD_INT_LIMIT;
+        }
+        else
+        {
+            crash_with_message("oversized memory requested");
+        }
+
         map->length = 0;
-        map->capacity *= 2;
         map->items = (lngrd_Pair *) allocate(map->capacity, sizeof(lngrd_Pair));
 
         for (index = 0; index < map->capacity; index++)
