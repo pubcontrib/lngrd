@@ -2931,13 +2931,19 @@ static void do_read_work(lngrd_Executer *executer)
             break;
         }
 
-        buffer[fill++] = symbol;
-
         if (fill == length)
         {
             char *swap;
 
-            if (!can_fit_both(length, length))
+            if (length < 1073741824L)
+            {
+                length *= 2;
+            }
+            else if (length == 1073741824L)
+            {
+                length = LNGRD_INT_LIMIT;
+            }
+            else
             {
                 if (closable)
                 {
@@ -2956,6 +2962,8 @@ static void do_read_work(lngrd_Executer *executer)
             free(buffer);
             buffer = swap;
         }
+
+        buffer[fill++] = symbol;
     }
 
     if (closable)
@@ -3849,12 +3857,19 @@ static void push_list_item(lngrd_List *list, lngrd_Block *item)
 {
     if (list->length == list->capacity)
     {
-        if (!can_fit_both(list->capacity, list->capacity))
+        if (list->capacity < 1073741824L)
+        {
+            list->capacity *= 2;
+        }
+        else if (list->capacity == 1073741824L)
+        {
+            list->capacity = LNGRD_INT_LIMIT;
+        }
+        else
         {
             crash_with_message("oversized memory requested");
         }
 
-        list->capacity *= 2;
         list->items = (lngrd_Block **) reallocate(list->items, list->capacity, sizeof(lngrd_Block *));
     }
 
@@ -4299,12 +4314,19 @@ static void push_plan_action(lngrd_Plan *plan, lngrd_Action action)
 {
     if (plan->length == plan->capacity)
     {
-        if (!can_fit_both(plan->capacity, plan->capacity))
+        if (plan->capacity < 1073741824L)
+        {
+            plan->capacity *= 2;
+        }
+        else if (plan->capacity == 1073741824L)
+        {
+            plan->capacity = LNGRD_INT_LIMIT;
+        }
+        else
         {
             crash_with_message("oversized memory requested");
         }
 
-        plan->capacity *= 2;
         plan->actions = (lngrd_Action *) reallocate(plan->actions, plan->capacity, sizeof(lngrd_Action));
     }
 
