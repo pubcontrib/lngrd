@@ -476,6 +476,12 @@ LNGRD_API void lngrd_progress_lexer(lngrd_Lexer *lexer)
         return;
     }
 
+    if (lexer->code->length > LNGRD_INT_LIMIT)
+    {
+        lexer->errored = 1;
+        return;
+    }
+
     lexer->token.type = LNGRD_TOKEN_TYPE_UNKNOWN;
     lexer->token.start = lexer->token.end;
 
