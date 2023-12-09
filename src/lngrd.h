@@ -3311,7 +3311,6 @@ static void do_classify_work(lngrd_Executer *executer)
 
         default:
             crash_with_message("unsupported branch");
-            return;
     }
 
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, cstring_to_string(type), 0), executer);
