@@ -497,7 +497,7 @@ LNGRD_API void lngrd_progress_lexer(lngrd_Lexer *lexer)
     {
         read_whitespace_token(lexer);
     }
-    else if (symbol == '(' || symbol == ')' || symbol == '\\' || symbol == '/' || symbol == ',' || symbol == '<' || symbol == '>')
+    else if (symbol == '(' || symbol == ')' || symbol == '\\' || symbol == '/' || symbol == ',' || symbol == '<' || symbol == '>' || symbol == '[' || symbol == ']')
     {
         lexer->token.type = LNGRD_TOKEN_TYPE_KEYSYMBOL;
     }
@@ -593,6 +593,29 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
                 if (type == LNGRD_BLOCK_TYPE_NUMBER || type == LNGRD_BLOCK_TYPE_STRING)
                 {
                     completed = 1;
+                }
+                else if (type == LNGRD_BLOCK_TYPE_LIST)
+                {
+                    lngrd_Expression *expression;
+                    lngrd_LiteralForm *form;
+                    lngrd_List *list;
+
+                    expression = (lngrd_Expression *) offer->data;
+
+                    if (expression->type != LNGRD_EXPRESSION_TYPE_LITERAL)
+                    {
+                        break;
+                    }
+
+                    form = (lngrd_LiteralForm *) expression->form;
+                    list = (lngrd_List *) block->data;
+                    push_list_item(list, form->block);
+
+                    offer->data = NULL;
+                    push_list_item(parser->pyre, offer);
+                    offer = NULL;
+                    free(expression->form);
+                    free(expression);
                 }
                 else if (type == LNGRD_BLOCK_TYPE_FUNCTION)
                 {
@@ -1119,6 +1142,34 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
 
                         terminate = 1;
                     }
+                    else if (symbol == '[')
+                    {
+                        lngrd_Expression *expression;
+                        lngrd_LiteralForm *form;
+                        lngrd_Block *block;
+                        lngrd_List *list;
+
+                        list = create_list();
+
+                        block = create_block(LNGRD_BLOCK_TYPE_LIST, list, 1);
+
+                        form = (lngrd_LiteralForm *) allocate(1, sizeof(lngrd_LiteralForm));
+                        form->block = block;
+
+                        expression = create_expression(LNGRD_EXPRESSION_TYPE_LITERAL, form);
+
+                        push_list_item(stack, create_block(LNGRD_BLOCK_TYPE_EXPRESSION, expression, 1));
+                    }
+                    else if (symbol == ']')
+                    {
+                        if (stack->length == 0 || ((lngrd_Expression *) peek_list_item(stack)->data)->type != LNGRD_EXPRESSION_TYPE_LITERAL)
+                        {
+                            parser->errored = 1;
+                            return;
+                        }
+
+                        terminate = 1;
+                    }
                     else if (symbol == ',')
                     {
                         continue;
@@ -1131,9 +1182,15 @@ LNGRD_API void lngrd_progress_parser(lngrd_Parser *parser)
     parser->closed = lexer->closed;
     parser->errored = lexer->errored;
 
-    if (stack->length > 0 || offer)
+    if (stack->length > 0)
     {
         parser->errored = 1;
+    }
+
+    if (offer)
+    {
+        parser->errored = 1;
+        push_list_item(parser->pyre, offer);
     }
 }
 
@@ -3547,34 +3604,37 @@ static void burn_pyre(lngrd_List *pyre)
 
         if (--fuel->references == 0)
         {
-            switch (fuel->type)
+            if (fuel->data)
             {
-                case LNGRD_BLOCK_TYPE_NUMBER:
-                    destroy_number((lngrd_Number *) fuel->data);
-                    break;
+                switch (fuel->type)
+                {
+                    case LNGRD_BLOCK_TYPE_NUMBER:
+                        destroy_number((lngrd_Number *) fuel->data);
+                        break;
 
-                case LNGRD_BLOCK_TYPE_STRING:
-                    destroy_string((lngrd_String *) fuel->data);
-                    break;
+                    case LNGRD_BLOCK_TYPE_STRING:
+                        destroy_string((lngrd_String *) fuel->data);
+                        break;
 
-                case LNGRD_BLOCK_TYPE_LIST:
-                    burn_list((lngrd_List *) fuel->data, pyre);
-                    break;
+                    case LNGRD_BLOCK_TYPE_LIST:
+                        burn_list((lngrd_List *) fuel->data, pyre);
+                        break;
 
-                case LNGRD_BLOCK_TYPE_MAP:
-                    burn_map((lngrd_Map *) fuel->data, pyre);
-                    break;
+                    case LNGRD_BLOCK_TYPE_MAP:
+                        burn_map((lngrd_Map *) fuel->data, pyre);
+                        break;
 
-                case LNGRD_BLOCK_TYPE_FUNCTION:
-                    burn_function((lngrd_Function *) fuel->data, pyre);
-                    break;
+                    case LNGRD_BLOCK_TYPE_FUNCTION:
+                        burn_function((lngrd_Function *) fuel->data, pyre);
+                        break;
 
-                case LNGRD_BLOCK_TYPE_EXPRESSION:
-                    burn_expression((lngrd_Expression *) fuel->data, pyre);
-                    break;
+                    case LNGRD_BLOCK_TYPE_EXPRESSION:
+                        burn_expression((lngrd_Expression *) fuel->data, pyre);
+                        break;
 
-                default:
-                    crash_with_message("unsupported branch");
+                    default:
+                        crash_with_message("unsupported branch");
+                }
             }
 
             free(fuel);

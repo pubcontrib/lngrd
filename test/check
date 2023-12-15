@@ -227,6 +227,23 @@ catch
   /
 
   \
+    "expression/list" |@suite
+
+    (@parseFails "[")
+    (@parseFails "]")
+    (@parseFails "[$variable]")
+    (@parseFails "[0 |$variable]")
+    (@parseFails "[%$variable]")
+    (@parseFails "[(@add 100 200)]")
+    (@parseFails "[if 0 \\ /]")
+    (@parseFails "[while 0 \\ /]")
+    (@parseFails "[catch \\ /]")
+    (@parseFails "[throw \"error\"]")
+    (@parseFails "[argument 1]")
+    (@parseFails "[\\ /]")
+  /
+
+  \
     "expression/function" |@suite
 
     (@returns <<>> <>)
@@ -377,6 +394,8 @@ catch
 
     (@returns <if 0 "x"> "")
     (@returns <if "" "x"> "")
+    (@returns <if [] "x"> "")
+    (@returns <if [ ] "x"> "")
     (@returns <if <> "x"> "")
     (@returns <if < > "x"> "")
     (@returns <if 1 "x"> "x")
@@ -386,6 +405,8 @@ catch
     (@returns <if "x" "x"> "x")
     (@returns <if "0" "x"> "x")
     (@returns <if "1" "x"> "x")
+    (@returns <if [""] "x"> "x")
+    (@returns <if ["x"] "x"> "x")
     (@returns <if <""> "x"> "x")
     (@returns <if <"x"> "x"> "x")
     (@returns <if @write "x"> "x")
@@ -1143,6 +1164,7 @@ catch
 
     (@returns <(@classify 0)> "number")
     (@returns <(@classify "")> "string")
+    (@returns <(@classify [])> "list")
     (@returns <(@classify <>)> "function")
     (@throws <(@classify)> "absent argument")
   /
