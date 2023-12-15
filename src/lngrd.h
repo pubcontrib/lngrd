@@ -2783,7 +2783,7 @@ static void do_measure_work(lngrd_Executer *executer)
     lngrd_Block *value;
     size_t length;
 
-    if (!require_argument(1, LNGRD_BLOCK_TYPE_STRING, executer, &value))
+    if (!require_argument(1, LNGRD_BLOCK_TYPE_STRING | LNGRD_BLOCK_TYPE_LIST, executer, &value))
     {
         return;
     }
@@ -2797,6 +2797,13 @@ static void do_measure_work(lngrd_Executer *executer)
         data = (lngrd_String *) value->data;
         length = data->length;
     }
+    else if (value->type == LNGRD_BLOCK_TYPE_LIST)
+    {
+        lngrd_List *data;
+
+        data = (lngrd_List *) value->data;
+        length = data->length;
+    }
 
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, (lngrd_SInt) length), 0), executer);
 }
@@ -2804,20 +2811,16 @@ static void do_measure_work(lngrd_Executer *executer)
 static void do_slice_work(lngrd_Executer *executer)
 {
     lngrd_Block *value, *start, *end;
-    lngrd_String *v;
     lngrd_Number *s, *e;
     lngrd_SInt left, right;
-    char *bytes;
-    size_t length;
 
-    if (!require_argument(1, LNGRD_BLOCK_TYPE_STRING, executer, &value)
+    if (!require_argument(1, LNGRD_BLOCK_TYPE_STRING | LNGRD_BLOCK_TYPE_LIST, executer, &value)
             || !require_argument(2, LNGRD_BLOCK_TYPE_NUMBER, executer, &start)
             || !require_argument(3, LNGRD_BLOCK_TYPE_NUMBER, executer, &end))
     {
         return;
     }
 
-    v = (lngrd_String *) value->data;
     s = (lngrd_Number *) start->data;
     e = (lngrd_Number *) end->data;
 
@@ -2838,77 +2841,167 @@ static void do_slice_work(lngrd_Executer *executer)
         left = 0;
     }
 
-    if (right < 0 || (size_t) right >= v->length)
+    if (value->type == LNGRD_BLOCK_TYPE_STRING)
     {
-        right = v->length - 1;
+        lngrd_String *v;
+        char *bytes;
+        size_t length;
+
+        v = (lngrd_String *) value->data;
+
+        if (right < 0 || (size_t) right >= v->length)
+        {
+            right = v->length - 1;
+        }
+
+        right += 1;
+        length = right - left;
+
+        if (length > 0)
+        {
+            bytes = (char *) allocate(length, sizeof(char));
+            memcpy(bytes, v->bytes + left, length);
+        }
+        else
+        {
+            bytes = NULL;
+        }
+
+        set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, create_string(bytes, length), 0), executer);
     }
-
-    right += 1;
-    length = right - left;
-
-    if (length > 0)
+    else if (value->type == LNGRD_BLOCK_TYPE_LIST)
     {
-        bytes = (char *) allocate(length, sizeof(char));
-        memcpy(bytes, v->bytes + left, length);
+        lngrd_List *v, *result;
+        size_t index, length;
+
+        v = (lngrd_List *) value->data;
+
+        if (right < 0 || (size_t) right >= v->length)
+        {
+            right = v->length - 1;
+        }
+
+        right += 1;
+        length = right - left;
+
+        result = create_list();
+
+        for (index = 0; index < length; index++)
+        {
+            push_list_item(result, v->items[left + index]);
+            v->items[left + index]->references += 1;
+        }
+
+        set_executor_result(create_block(LNGRD_BLOCK_TYPE_LIST, result, 0), executer);
     }
     else
     {
-        bytes = NULL;
+        crash_with_message("unsupported branch");
     }
-
-    set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, create_string(bytes, length), 0), executer);
 }
 
 static void do_merge_work(lngrd_Executer *executer)
 {
     lngrd_Block *left, *right;
-    lngrd_String *l, *r;
-    char *bytes;
-    size_t length;
 
-    if (!require_argument(1, LNGRD_BLOCK_TYPE_STRING, executer, &left)
-            || !require_argument(2, LNGRD_BLOCK_TYPE_STRING, executer, &right))
+    if (!require_argument(1, LNGRD_BLOCK_TYPE_STRING | LNGRD_BLOCK_TYPE_LIST, executer, &left)
+            || !require_argument(2, LNGRD_BLOCK_TYPE_STRING | LNGRD_BLOCK_TYPE_LIST, executer, &right))
     {
         return;
     }
 
-    l = (lngrd_String *) left->data;
-    r = (lngrd_String *) right->data;
-
-    if (!can_fit_both(l->length, r->length))
+    if (left->type != right->type)
     {
-        set_executer_error("boundary error", executer);
+        set_executer_error("alien argument", executer);
         return;
     }
 
-    length = l->length + r->length;
-
-    if (length > LNGRD_INT_LIMIT)
+    if (left->type == LNGRD_BLOCK_TYPE_STRING)
     {
-        set_executer_error("boundary error", executer);
-        return;
+        lngrd_String *l, *r;
+        char *bytes;
+        size_t length;
+
+        l = (lngrd_String *) left->data;
+        r = (lngrd_String *) right->data;
+
+        if (!can_fit_both(l->length, r->length))
+        {
+            set_executer_error("boundary error", executer);
+            return;
+        }
+
+        length = l->length + r->length;
+
+        if (length > LNGRD_INT_LIMIT)
+        {
+            set_executer_error("boundary error", executer);
+            return;
+        }
+
+        if (length > 0)
+        {
+            bytes = (char *) allocate(length, sizeof(char));
+        }
+        else
+        {
+            bytes = NULL;
+        }
+
+        if (l->length > 0)
+        {
+            memcpy(bytes, l->bytes, l->length);
+        }
+
+        if (r->length > 0)
+        {
+            memcpy(bytes + l->length, r->bytes, r->length);
+        }
+
+        set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, create_string(bytes, length), 0), executer);
     }
-
-    if (length > 0)
+    else if (left->type == LNGRD_BLOCK_TYPE_LIST)
     {
-        bytes = (char *) allocate(length, sizeof(char));
+        lngrd_List *l, *r, *result;
+        size_t index, length;
+
+        l = (lngrd_List *) left->data;
+        r = (lngrd_List *) right->data;
+
+        if (!can_fit_both(l->length, r->length))
+        {
+            set_executer_error("boundary error", executer);
+            return;
+        }
+
+        length = l->length + r->length;
+
+        if (length > LNGRD_INT_LIMIT)
+        {
+            set_executer_error("boundary error", executer);
+            return;
+        }
+
+        result = create_list();
+
+        for (index = 0; index < l->length; index++)
+        {
+            push_list_item(result, l->items[index]);
+            l->items[index]->references += 1;
+        }
+
+        for (index = 0; index < r->length; index++)
+        {
+            push_list_item(result, r->items[index]);
+            r->items[index]->references += 1;
+        }
+
+        set_executor_result(create_block(LNGRD_BLOCK_TYPE_LIST, result, 0), executer);
     }
     else
     {
-        bytes = NULL;
+        crash_with_message("unsupported branch");
     }
-
-    if (l->length > 0)
-    {
-        memcpy(bytes, l->bytes, l->length);
-    }
-
-    if (r->length > 0)
-    {
-        memcpy(bytes + l->length, r->bytes, r->length);
-    }
-
-    set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, create_string(bytes, length), 0), executer);
 }
 
 static void do_read_work(lngrd_Executer *executer)
