@@ -234,6 +234,8 @@ typedef struct
     lngrd_List *locals;
     lngrd_Plan *plan;
     lngrd_List *arguments;
+    lngrd_List *sketches;
+    lngrd_List *doodles;
 } lngrd_Executer;
 
 /*literal expression form*/
@@ -396,7 +398,7 @@ static void set_executor_result(lngrd_Block *result, lngrd_Executer *executer);
 static int require_argument(lngrd_UInt index, lngrd_UInt types, lngrd_Executer *executer, lngrd_Block **result);
 static lngrd_Block *create_block(lngrd_BlockType type, void *data, size_t references);
 static lngrd_UInt hash_block(const lngrd_Block *block);
-static lngrd_SInt compare_blocks(const lngrd_Block *x, const lngrd_Block *y);
+static lngrd_SInt compare_blocks(const lngrd_Block *x, const lngrd_Block *y, lngrd_List *sketches, lngrd_List *doodles);
 static int is_block_truthy(const lngrd_Block *block);
 static void burn_pyre(lngrd_List *pyre);
 static lngrd_Number *create_number(lngrd_NumberLayout layout, lngrd_SInt value);
@@ -419,9 +421,9 @@ static lngrd_Block *pop_list_item(lngrd_List *list);
 static lngrd_Block *peek_list_item(lngrd_List *list);
 static void burn_list(lngrd_List *list, lngrd_List *pyre);
 static lngrd_Map *create_map(void);
-static lngrd_Block *get_map_item(lngrd_Map *map, lngrd_Block *key);
-static void set_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_Block *block, lngrd_List *pyre);
-static void unset_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_List *pyre);
+static lngrd_Block *get_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_List *sketches, lngrd_List *doodles);
+static void set_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_Block *block, lngrd_List *pyre, lngrd_List *sketches, lngrd_List *doodles);
+static void unset_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_List *pyre, lngrd_List *sketches, lngrd_List *doodles);
 static void burn_map(lngrd_Map *map, lngrd_List *pyre);
 static lngrd_Function *create_function(void);
 static lngrd_SInt compare_functions(const lngrd_Function *left, const lngrd_Function *right);
@@ -1215,6 +1217,8 @@ LNGRD_API void lngrd_start_executer(lngrd_Executer *executer, lngrd_List *pyre)
     executer->locals = create_list();
     executer->plan = create_plan();
     executer->arguments = create_list();
+    executer->sketches = create_list();
+    executer->doodles = create_list();
 
     set_global_function("add", "<(@add argument 1 argument 2)>", do_add_work, executer);
     set_global_function("subtract", "<(@subtract argument 1 argument 2)>", do_subtract_work, executer);
@@ -1344,11 +1348,11 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
                         push_list_item(locals, create_block(LNGRD_BLOCK_TYPE_MAP, create_map(), 1));
                     }
 
-                    block = get_map_item((lngrd_Map *) peek_list_item(locals)->data, form->name);
+                    block = get_map_item((lngrd_Map *) peek_list_item(locals)->data, form->name, executer->sketches, executer->doodles);
                 }
                 else if (form->scope == LNGRD_SCOPE_TYPE_GLOBAL)
                 {
-                    block = get_map_item(executer->globals, form->name);
+                    block = get_map_item(executer->globals, form->name, executer->sketches, executer->doodles);
                 }
                 else
                 {
@@ -1381,11 +1385,11 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
                         push_list_item(locals, create_block(LNGRD_BLOCK_TYPE_MAP, create_map(), 1));
                     }
 
-                    set_map_item((lngrd_Map *) peek_list_item(locals)->data, form->name, executer->result, executer->pyre);
+                    set_map_item((lngrd_Map *) peek_list_item(locals)->data, form->name, executer->result, executer->pyre, executer->sketches, executer->doodles);
                 }
                 else if (form->scope == LNGRD_SCOPE_TYPE_GLOBAL)
                 {
-                    set_map_item(executer->globals, form->name, executer->result, executer->pyre);
+                    set_map_item(executer->globals, form->name, executer->result, executer->pyre, executer->sketches, executer->doodles);
                 }
             }
             else if (expression->type == LNGRD_EXPRESSION_TYPE_UNASSIGN)
@@ -1402,11 +1406,11 @@ LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *p
                         push_list_item(locals, create_block(LNGRD_BLOCK_TYPE_MAP, create_map(), 1));
                     }
 
-                    unset_map_item((lngrd_Map *) peek_list_item(locals)->data, form->name, executer->pyre);
+                    unset_map_item((lngrd_Map *) peek_list_item(locals)->data, form->name, executer->pyre, executer->sketches, executer->doodles);
                 }
                 else if (form->scope == LNGRD_SCOPE_TYPE_GLOBAL)
                 {
-                    unset_map_item(executer->globals, form->name, executer->pyre);
+                    unset_map_item(executer->globals, form->name, executer->pyre, executer->sketches, executer->doodles);
                 }
 
                 set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, cstring_to_string(""), 0), executer);
@@ -1762,6 +1766,10 @@ LNGRD_API void lngrd_stop_executer(lngrd_Executer *executer)
     burn_list(executer->locals, executer->pyre);
     destroy_plan(executer->plan);
     burn_list(executer->arguments, executer->pyre);
+    free(executer->sketches->items);
+    free(executer->sketches);
+    free(executer->doodles->items);
+    free(executer->doodles);
 
     burn_pyre(executer->pyre);
 }
@@ -2735,39 +2743,39 @@ static void do_precedes_work(lngrd_Executer *executer)
 {
     lngrd_Block *left, *right;
 
-    if (!require_argument(1, LNGRD_BLOCK_TYPE_NUMBER | LNGRD_BLOCK_TYPE_STRING | LNGRD_BLOCK_TYPE_FUNCTION, executer, &left)
-            || !require_argument(2, LNGRD_BLOCK_TYPE_NUMBER | LNGRD_BLOCK_TYPE_STRING | LNGRD_BLOCK_TYPE_FUNCTION, executer, &right))
+    if (!require_argument(1, LNGRD_BLOCK_TYPE_NUMBER | LNGRD_BLOCK_TYPE_STRING | LNGRD_BLOCK_TYPE_LIST | LNGRD_BLOCK_TYPE_FUNCTION, executer, &left)
+            || !require_argument(2, LNGRD_BLOCK_TYPE_NUMBER | LNGRD_BLOCK_TYPE_STRING | LNGRD_BLOCK_TYPE_LIST | LNGRD_BLOCK_TYPE_FUNCTION, executer, &right))
     {
         return;
     }
 
-    set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, compare_blocks(left, right) < 0), 0), executer);
+    set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, compare_blocks(left, right, executer->sketches, executer->doodles) < 0), 0), executer);
 }
 
 static void do_succeeds_work(lngrd_Executer *executer)
 {
     lngrd_Block *left, *right;
 
-    if (!require_argument(1, LNGRD_BLOCK_TYPE_NUMBER | LNGRD_BLOCK_TYPE_STRING | LNGRD_BLOCK_TYPE_FUNCTION, executer, &left)
-            || !require_argument(2, LNGRD_BLOCK_TYPE_NUMBER | LNGRD_BLOCK_TYPE_STRING | LNGRD_BLOCK_TYPE_FUNCTION, executer, &right))
+    if (!require_argument(1, LNGRD_BLOCK_TYPE_NUMBER | LNGRD_BLOCK_TYPE_STRING | LNGRD_BLOCK_TYPE_LIST | LNGRD_BLOCK_TYPE_FUNCTION, executer, &left)
+            || !require_argument(2, LNGRD_BLOCK_TYPE_NUMBER | LNGRD_BLOCK_TYPE_STRING | LNGRD_BLOCK_TYPE_LIST | LNGRD_BLOCK_TYPE_FUNCTION, executer, &right))
     {
         return;
     }
 
-    set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, compare_blocks(left, right) > 0), 0), executer);
+    set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, compare_blocks(left, right, executer->sketches, executer->doodles) > 0), 0), executer);
 }
 
 static void do_equals_work(lngrd_Executer *executer)
 {
     lngrd_Block *left, *right;
 
-    if (!require_argument(1, LNGRD_BLOCK_TYPE_NUMBER | LNGRD_BLOCK_TYPE_STRING | LNGRD_BLOCK_TYPE_FUNCTION, executer, &left)
-            || !require_argument(2, LNGRD_BLOCK_TYPE_NUMBER | LNGRD_BLOCK_TYPE_STRING | LNGRD_BLOCK_TYPE_FUNCTION, executer, &right))
+    if (!require_argument(1, LNGRD_BLOCK_TYPE_NUMBER | LNGRD_BLOCK_TYPE_STRING | LNGRD_BLOCK_TYPE_LIST | LNGRD_BLOCK_TYPE_FUNCTION, executer, &left)
+            || !require_argument(2, LNGRD_BLOCK_TYPE_NUMBER | LNGRD_BLOCK_TYPE_STRING | LNGRD_BLOCK_TYPE_LIST | LNGRD_BLOCK_TYPE_FUNCTION, executer, &right))
     {
         return;
     }
 
-    set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, compare_blocks(left, right) == 0), 0), executer);
+    set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, compare_blocks(left, right, executer->sketches, executer->doodles) == 0), 0), executer);
 }
 
 static void do_measure_work(lngrd_Executer *executer)
@@ -3450,7 +3458,7 @@ static void set_global_function(const char *name, const char *source, void (*wor
     expression = create_expression(LNGRD_EXPRESSION_TYPE_NATIVE, form);
     push_list_item(function->expressions, create_block(LNGRD_BLOCK_TYPE_EXPRESSION, expression, 1));
     value = create_block(LNGRD_BLOCK_TYPE_FUNCTION, function, 1);
-    set_map_item(executer->globals, key, value, executer->pyre);
+    set_map_item(executer->globals, key, value, executer->pyre, executer->sketches, executer->doodles);
 }
 
 static void set_executer_error(const char *message, lngrd_Executer *executer)
@@ -3534,30 +3542,96 @@ static lngrd_UInt hash_block(const lngrd_Block *block)
     return 0;
 }
 
-static lngrd_SInt compare_blocks(const lngrd_Block *x, const lngrd_Block *y)
+static lngrd_SInt compare_blocks(const lngrd_Block *x, const lngrd_Block *y, lngrd_List *sketches, lngrd_List *doodles)
 {
-    if (x->type < y->type)
+    sketches->length = 0;
+    push_list_item(sketches, (lngrd_Block *) x);
+    doodles->length = 0;
+    push_list_item(doodles, (lngrd_Block *) y);
+
+    while (sketches->length > 0)
     {
-        return -1;
-    }
-    else if (x->type > y->type)
-    {
-        return 1;
-    }
+        lngrd_Block *left, *right;
+        lngrd_SInt test;
 
-    switch (x->type)
-    {
-        case LNGRD_BLOCK_TYPE_NUMBER:
-            return compare_numbers((lngrd_Number *) x->data, (lngrd_Number *) y->data);
+        left = pop_list_item(sketches);
+        right = pop_list_item(doodles);
 
-        case LNGRD_BLOCK_TYPE_STRING:
-            return compare_strings((lngrd_String *) x->data, (lngrd_String *) y->data);
+        if (left->type < right->type)
+        {
+            return -1;
+        }
+        else if (x->type > y->type)
+        {
+            return 1;
+        }
 
-        case LNGRD_BLOCK_TYPE_FUNCTION:
-            return compare_functions((lngrd_Function *) x->data, (lngrd_Function *) y->data);
+        test = 0;
 
-        default:
-            crash_with_message("unsupported branch");
+        switch (left->type)
+        {
+            case LNGRD_BLOCK_TYPE_NUMBER:
+                test = compare_numbers((lngrd_Number *) left->data, (lngrd_Number *) right->data);
+                break;
+
+            case LNGRD_BLOCK_TYPE_STRING:
+                test = compare_strings((lngrd_String *) left->data, (lngrd_String *) right->data);
+                break;
+
+            case LNGRD_BLOCK_TYPE_LIST:
+            {
+                lngrd_List *l, *r;
+                size_t index;
+
+                l = (lngrd_List *) left->data;
+                r = (lngrd_List *) right->data;
+
+                if (l->length < r->length)
+                {
+                    test = -1;
+                    break;
+                }
+                else if (l->length > r->length)
+                {
+                    test = 1;
+                    break;
+                }
+
+                if (l->length == 0)
+                {
+                    break;
+                }
+
+                index = l->length - 1;
+
+                while (1)
+                {
+                    push_list_item(sketches, l->items[index]);
+                    push_list_item(doodles, r->items[index]);
+
+                    if (index == 0)
+                    {
+                        break;
+                    }
+
+                    index -= 1;
+                }
+
+                break;
+            }
+
+            case LNGRD_BLOCK_TYPE_FUNCTION:
+                test = compare_functions((lngrd_Function *) left->data, (lngrd_Function *) right->data);
+                break;
+
+            default:
+                crash_with_message("unsupported branch");
+        }
+
+        if (test != 0)
+        {
+            return test;
+        }
     }
 
     return 0;
@@ -3992,7 +4066,7 @@ static lngrd_Map *create_map(void)
     return map;
 }
 
-static lngrd_Block *get_map_item(lngrd_Map *map, lngrd_Block *key)
+static lngrd_Block *get_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_List *sketches, lngrd_List *doodles)
 {
     size_t index, tally;
 
@@ -4011,7 +4085,7 @@ static lngrd_Block *get_map_item(lngrd_Map *map, lngrd_Block *key)
 
         if (pair->phase == LNGRD_PAIR_PHASE_OCCUPIED)
         {
-            if (compare_blocks(key, pair->key) == 0)
+            if (compare_blocks(key, pair->key, sketches, doodles) == 0)
             {
                 return pair->value;
             }
@@ -4029,7 +4103,7 @@ static lngrd_Block *get_map_item(lngrd_Map *map, lngrd_Block *key)
     return NULL;
 }
 
-static void set_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_Block *block, lngrd_List *pyre)
+static void set_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_Block *block, lngrd_List *pyre, lngrd_List *sketches, lngrd_List *doodles)
 {
     size_t index, tally;
 
@@ -4070,7 +4144,7 @@ static void set_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_Block *block, l
 
             if (item->phase == LNGRD_PAIR_PHASE_OCCUPIED)
             {
-                set_map_item(map, item->key, item->value, pyre);
+                set_map_item(map, item->key, item->value, pyre, sketches, doodles);
             }
         }
 
@@ -4092,7 +4166,7 @@ static void set_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_Block *block, l
 
         if (pair->phase == LNGRD_PAIR_PHASE_OCCUPIED)
         {
-            if (compare_blocks(key, pair->key) == 0)
+            if (compare_blocks(key, pair->key, sketches, doodles) == 0)
             {
                 push_list_item(pyre, pair->key);
                 push_list_item(pyre, pair->value);
@@ -4114,7 +4188,7 @@ static void set_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_Block *block, l
     }
 }
 
-static void unset_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_List *pyre)
+static void unset_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_List *pyre, lngrd_List *sketches, lngrd_List *doodles)
 {
     size_t index, tally;
 
@@ -4133,7 +4207,7 @@ static void unset_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_List *pyre)
 
         if (pair->phase == LNGRD_PAIR_PHASE_OCCUPIED)
         {
-            if (compare_blocks(key, pair->key) == 0)
+            if (compare_blocks(key, pair->key, sketches, doodles) == 0)
             {
                 push_list_item(pyre, pair->key);
                 push_list_item(pyre, pair->value);
