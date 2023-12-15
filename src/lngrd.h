@@ -2705,8 +2705,8 @@ static void do_and_work(lngrd_Executer *executer)
 {
     lngrd_Block *left, *right;
 
-    if (!require_argument(1, LNGRD_BLOCK_TYPE_NUMBER | LNGRD_BLOCK_TYPE_STRING | LNGRD_BLOCK_TYPE_FUNCTION, executer, &left)
-            || !require_argument(2, LNGRD_BLOCK_TYPE_NUMBER | LNGRD_BLOCK_TYPE_STRING | LNGRD_BLOCK_TYPE_FUNCTION, executer, &right))
+    if (!require_argument(1, LNGRD_BLOCK_TYPE_NUMBER | LNGRD_BLOCK_TYPE_STRING | LNGRD_BLOCK_TYPE_LIST | LNGRD_BLOCK_TYPE_FUNCTION, executer, &left)
+            || !require_argument(2, LNGRD_BLOCK_TYPE_NUMBER | LNGRD_BLOCK_TYPE_STRING | LNGRD_BLOCK_TYPE_LIST | LNGRD_BLOCK_TYPE_FUNCTION, executer, &right))
     {
         return;
     }
@@ -2718,8 +2718,8 @@ static void do_or_work(lngrd_Executer *executer)
 {
     lngrd_Block *left, *right;
 
-    if (!require_argument(1, LNGRD_BLOCK_TYPE_NUMBER | LNGRD_BLOCK_TYPE_STRING | LNGRD_BLOCK_TYPE_FUNCTION, executer, &left)
-            || !require_argument(2, LNGRD_BLOCK_TYPE_NUMBER | LNGRD_BLOCK_TYPE_STRING | LNGRD_BLOCK_TYPE_FUNCTION, executer, &right))
+    if (!require_argument(1, LNGRD_BLOCK_TYPE_NUMBER | LNGRD_BLOCK_TYPE_STRING | LNGRD_BLOCK_TYPE_LIST | LNGRD_BLOCK_TYPE_FUNCTION, executer, &left)
+            || !require_argument(2, LNGRD_BLOCK_TYPE_NUMBER | LNGRD_BLOCK_TYPE_STRING | LNGRD_BLOCK_TYPE_LIST | LNGRD_BLOCK_TYPE_FUNCTION, executer, &right))
     {
         return;
     }
@@ -2731,7 +2731,7 @@ static void do_not_work(lngrd_Executer *executer)
 {
     lngrd_Block *value;
 
-    if (!require_argument(1, LNGRD_BLOCK_TYPE_NUMBER | LNGRD_BLOCK_TYPE_STRING | LNGRD_BLOCK_TYPE_FUNCTION, executer, &value))
+    if (!require_argument(1, LNGRD_BLOCK_TYPE_NUMBER | LNGRD_BLOCK_TYPE_STRING | LNGRD_BLOCK_TYPE_LIST | LNGRD_BLOCK_TYPE_FUNCTION, executer, &value))
     {
         return;
     }
