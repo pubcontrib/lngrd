@@ -323,6 +323,14 @@ typedef struct
     void (*work)(lngrd_Executer *);
 } lngrd_NativeForm;
 
+/*dynamic length terminated ASCII string*/
+typedef struct
+{
+    char *bytes;
+    size_t length;
+    size_t capacity;
+} lngrd_Buffer;
+
 /*checks if the run-time environment meets minimum requirements*/
 LNGRD_API int lngrd_check_support(void);
 /*initializes a lexer*/
@@ -437,6 +445,9 @@ static lngrd_Action peek_plan_action(lngrd_Plan *plan);
 static void destroy_plan(lngrd_Plan *plan);
 static lngrd_Action prepare_simple_action(lngrd_Block *single, lngrd_UInt checkpoint, lngrd_UInt capacity);
 static lngrd_Action prepare_general_action(lngrd_List *expressions, lngrd_UInt ownership, lngrd_UInt checkpoint, lngrd_UInt capacity);
+static void start_buffer(lngrd_Buffer *buffer);
+static int append_buffer_bytes(lngrd_Buffer *buffer, const lngrd_String *string);
+static lngrd_String *buffer_to_string(lngrd_Buffer *buffer);
 static int can_fit_both(size_t left, size_t right);
 static void *allocate(size_t number, size_t size);
 static void *reallocate(void *memory, size_t number, size_t size);
@@ -3335,59 +3346,152 @@ static void do_exit_work(lngrd_Executer *executer)
 static void do_serialize_work(lngrd_Executer *executer)
 {
     lngrd_Block *value;
-    lngrd_String *string;
+    lngrd_Buffer buffer;
+    lngrd_List *sketches;
+    static const lngrd_String listStart = {(char *) "[", 1};
+    static const lngrd_String listEnd = {(char *) "]", 1};
+    static const lngrd_String delimiter = {(char *) " ", 1};
 
-    if (!require_argument(1, LNGRD_BLOCK_TYPE_NUMBER | LNGRD_BLOCK_TYPE_STRING | LNGRD_BLOCK_TYPE_FUNCTION, executer, &value))
+    if (!require_argument(1, LNGRD_BLOCK_TYPE_NUMBER | LNGRD_BLOCK_TYPE_STRING | LNGRD_BLOCK_TYPE_LIST | LNGRD_BLOCK_TYPE_FUNCTION, executer, &value))
     {
         return;
     }
 
-    string = NULL;
+    start_buffer(&buffer);
+    sketches = executer->sketches;
 
-    switch (value->type)
+    sketches->length = 0;
+    push_list_item(sketches, value);
+
+    while (sketches->length > 0)
     {
-        case LNGRD_BLOCK_TYPE_NUMBER:
+        value = pop_list_item(sketches);
+
+        if (value)
         {
-            if (!number_to_string((lngrd_Number *) value->data, &string))
+            switch (value->type)
             {
-                set_executer_error("codec error", executer);
-                return;
+                case LNGRD_BLOCK_TYPE_NUMBER:
+                {
+                    lngrd_String *string;
+
+                    if (!number_to_string((lngrd_Number *) value->data, &string))
+                    {
+                        free(buffer.bytes);
+                        set_executer_error("codec error", executer);
+                        return;
+                    }
+
+                    if (!append_buffer_bytes(&buffer, string))
+                    {
+                        free(buffer.bytes);
+                        set_executer_error("codec error", executer);
+                        return;
+                    }
+
+                    destroy_string(string);
+
+                    if (sketches->length > 0 && peek_list_item(sketches))
+                    {
+                        append_buffer_bytes(&buffer, &delimiter);
+                    }
+
+                    break;
+                }
+
+                case LNGRD_BLOCK_TYPE_STRING:
+                {
+                    lngrd_String *string;
+
+                    if (!escape_string((lngrd_String *) value->data, &string))
+                    {
+                        free(buffer.bytes);
+                        set_executer_error("codec error", executer);
+                        return;
+                    }
+
+                    if (!append_buffer_bytes(&buffer, string))
+                    {
+                        free(buffer.bytes);
+                        set_executer_error("codec error", executer);
+                        return;
+                    }
+
+                    destroy_string(string);
+
+                    if (sketches->length > 0 && peek_list_item(sketches))
+                    {
+                        append_buffer_bytes(&buffer, &delimiter);
+                    }
+
+                    break;
+                }
+
+                case LNGRD_BLOCK_TYPE_LIST:
+                {
+                    lngrd_List *list;
+                    size_t index;
+
+                    append_buffer_bytes(&buffer, &listStart);
+                    push_list_item(sketches, NULL);
+
+                    list = (lngrd_List *) value->data;
+
+                    if (list->length == 0)
+                    {
+                        break;
+                    }
+
+                    index = list->length - 1;
+
+                    while (1)
+                    {
+                        push_list_item(sketches, list->items[index]);
+
+                        if (index == 0)
+                        {
+                            break;
+                        }
+
+                        index -= 1;
+                    }
+
+                    break;
+                }
+
+                case LNGRD_BLOCK_TYPE_FUNCTION:
+                {
+                    if (!append_buffer_bytes(&buffer, ((lngrd_Function *) value->data)->source))
+                    {
+                        free(buffer.bytes);
+                        set_executer_error("codec error", executer);
+                        return;
+                    }
+
+                    if (sketches->length > 0 && peek_list_item(sketches))
+                    {
+                        append_buffer_bytes(&buffer, &delimiter);
+                    }
+
+                    break;
+                }
+
+                default:
+                    crash_with_message("unsupported branch");
             }
-
-            break;
         }
-
-        case LNGRD_BLOCK_TYPE_STRING:
+        else
         {
-            if (!escape_string((lngrd_String *) value->data, &string))
+            append_buffer_bytes(&buffer, &listEnd);
+
+            if (sketches->length > 0 && peek_list_item(sketches))
             {
-                set_executer_error("codec error", executer);
-                return;
+                append_buffer_bytes(&buffer, &delimiter);
             }
-
-            break;
         }
-
-        case LNGRD_BLOCK_TYPE_FUNCTION:
-        {
-            lngrd_Function *function;
-            char *bytes;
-            size_t length;
-
-            function = (lngrd_Function *) value->data;
-            length = function->source->length;
-            bytes = (char *) allocate(length, sizeof(char));
-            memcpy(bytes, function->source->bytes, length);
-            string = create_string(bytes, length);
-
-            break;
-        }
-
-        default:
-            crash_with_message("unsupported branch");
     }
 
-    set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, string, 0), executer);
+    set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, buffer_to_string(&buffer), 0), executer);
 }
 
 static void do_deserialize_work(lngrd_Executer *executer)
@@ -4636,6 +4740,80 @@ static lngrd_Action prepare_general_action(lngrd_List *expressions, lngrd_UInt o
     action.provisioned = 0;
 
     return action;
+}
+
+static void start_buffer(lngrd_Buffer *buffer)
+{
+    size_t capacity;
+
+    capacity = 8;
+    buffer->bytes = (char *) allocate(capacity, sizeof(char));
+    buffer->length = 0;
+    buffer->capacity = capacity;
+}
+
+static int append_buffer_bytes(lngrd_Buffer *buffer, const lngrd_String *string)
+{
+    int resize;
+
+    if (string->length == 0)
+    {
+        return 1;
+    }
+
+    if (!can_fit_both(buffer->length, string->length))
+    {
+        return 0;
+    }
+
+    resize = 0;
+
+    while (buffer->length + string->length > buffer->capacity)
+    {
+        if (buffer->capacity < 1073741824L)
+        {
+            buffer->capacity *= 2;
+        }
+        else if (buffer->capacity == 1073741824L)
+        {
+            buffer->capacity = LNGRD_INT_LIMIT;
+        }
+        else
+        {
+            return 0;
+        }
+
+        resize = 1;
+    }
+
+    if (resize)
+    {
+        buffer->bytes = (char *) reallocate(buffer->bytes, buffer->capacity, sizeof(char));
+    }
+
+    memcpy(buffer->bytes + buffer->length, string->bytes, string->length);
+    buffer->length += string->length;
+
+    return 1;
+}
+
+static lngrd_String *buffer_to_string(lngrd_Buffer *buffer)
+{
+    lngrd_String *string;
+
+    string = (lngrd_String *) allocate(1, sizeof(lngrd_String));
+    string->length = buffer->length;
+
+    if (buffer->length > 0)
+    {
+        string->bytes = (char *) reallocate(buffer->bytes, buffer->length, sizeof(char));
+    }
+    else
+    {
+        string->bytes = NULL;
+    }
+
+    return string;
 }
 
 static int can_fit_both(size_t left, size_t right)
