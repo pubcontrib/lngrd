@@ -545,6 +545,7 @@ catch
     (@throws <(<argument 1>)> "absent argument")
     (@throws <(<argument 1> "x") argument 1> "absent argument")
     (@throws <argument ""> "alien argument")
+    (@throws <argument []> "alien argument")
     (@throws <argument <>> "alien argument")
     (@parseFails "argument")
   /
@@ -581,10 +582,21 @@ catch
     (@throws <(@add -2147483647 -2147483647)> "arithmetic error")
     (@throws <(@add)> "absent argument")
     (@throws <(@add 0)> "absent argument")
-    (@throws <(@add "" 0)> "alien argument")
     (@throws <(@add 0 "")> "alien argument")
-    (@throws <(@add <> 0)> "alien argument")
+    (@throws <(@add 0 [])> "alien argument")
     (@throws <(@add 0 <>)> "alien argument")
+    (@throws <(@add "" 0)> "alien argument")
+    (@throws <(@add "" "")> "alien argument")
+    (@throws <(@add "" [])> "alien argument")
+    (@throws <(@add "" <>)> "alien argument")
+    (@throws <(@add [] 0)> "alien argument")
+    (@throws <(@add [] "")> "alien argument")
+    (@throws <(@add [] [])> "alien argument")
+    (@throws <(@add [] <>)> "alien argument")
+    (@throws <(@add <> 0)> "alien argument")
+    (@throws <(@add <> "")> "alien argument")
+    (@throws <(@add <> [])> "alien argument")
+    (@throws <(@add <> <>)> "alien argument")
   /
 
   \
@@ -609,10 +621,21 @@ catch
     (@throws <(@subtract -2147483647 2147483647)> "arithmetic error")
     (@throws <(@subtract)> "absent argument")
     (@throws <(@subtract 0)> "absent argument")
-    (@throws <(@subtract "" 0)> "alien argument")
     (@throws <(@subtract 0 "")> "alien argument")
-    (@throws <(@subtract <> 0)> "alien argument")
+    (@throws <(@subtract 0 [])> "alien argument")
     (@throws <(@subtract 0 <>)> "alien argument")
+    (@throws <(@subtract "" 0)> "alien argument")
+    (@throws <(@subtract "" "")> "alien argument")
+    (@throws <(@subtract "" [])> "alien argument")
+    (@throws <(@subtract "" <>)> "alien argument")
+    (@throws <(@subtract [] 0)> "alien argument")
+    (@throws <(@subtract [] "")> "alien argument")
+    (@throws <(@subtract [] [])> "alien argument")
+    (@throws <(@subtract [] <>)> "alien argument")
+    (@throws <(@subtract <> 0)> "alien argument")
+    (@throws <(@subtract <> "")> "alien argument")
+    (@throws <(@subtract <> [])> "alien argument")
+    (@throws <(@subtract <> <>)> "alien argument")
   /
 
   \
@@ -643,10 +666,21 @@ catch
     (@throws <(@multiply -2147483647 -2147483647)> "arithmetic error")
     (@throws <(@multiply)> "absent argument")
     (@throws <(@multiply 0)> "absent argument")
-    (@throws <(@multiply "" 0)> "alien argument")
     (@throws <(@multiply 0 "")> "alien argument")
-    (@throws <(@multiply <> 0)> "alien argument")
+    (@throws <(@multiply 0 [])> "alien argument")
     (@throws <(@multiply 0 <>)> "alien argument")
+    (@throws <(@multiply "" 0)> "alien argument")
+    (@throws <(@multiply "" "")> "alien argument")
+    (@throws <(@multiply "" [])> "alien argument")
+    (@throws <(@multiply "" <>)> "alien argument")
+    (@throws <(@multiply [] 0)> "alien argument")
+    (@throws <(@multiply [] "")> "alien argument")
+    (@throws <(@multiply [] [])> "alien argument")
+    (@throws <(@multiply [] <>)> "alien argument")
+    (@throws <(@multiply <> 0)> "alien argument")
+    (@throws <(@multiply <> "")> "alien argument")
+    (@throws <(@multiply <> [])> "alien argument")
+    (@throws <(@multiply <> <>)> "alien argument")
   /
 
   \
@@ -669,10 +703,21 @@ catch
     (@returns <(@divide -2147483647 -2147483647)> 1)
     (@throws <(@divide)> "absent argument")
     (@throws <(@divide 0)> "absent argument")
-    (@throws <(@divide "" 0)> "alien argument")
     (@throws <(@divide 0 "")> "alien argument")
-    (@throws <(@divide <> 0)> "alien argument")
+    (@throws <(@divide 0 [])> "alien argument")
     (@throws <(@divide 0 <>)> "alien argument")
+    (@throws <(@divide "" 0)> "alien argument")
+    (@throws <(@divide "" "")> "alien argument")
+    (@throws <(@divide "" [])> "alien argument")
+    (@throws <(@divide "" <>)> "alien argument")
+    (@throws <(@divide [] 0)> "alien argument")
+    (@throws <(@divide [] "")> "alien argument")
+    (@throws <(@divide [] [])> "alien argument")
+    (@throws <(@divide [] <>)> "alien argument")
+    (@throws <(@divide <> 0)> "alien argument")
+    (@throws <(@divide <> "")> "alien argument")
+    (@throws <(@divide <> [])> "alien argument")
+    (@throws <(@divide <> <>)> "alien argument")
   /
 
   \
@@ -694,10 +739,21 @@ catch
     (@returns <(@modulo -2147483647 -2147483647)> 0)
     (@throws <(@modulo)> "absent argument")
     (@throws <(@modulo 0)> "absent argument")
-    (@throws <(@modulo "" 0)> "alien argument")
     (@throws <(@modulo 0 "")> "alien argument")
-    (@throws <(@modulo <> 0)> "alien argument")
+    (@throws <(@modulo 0 [])> "alien argument")
     (@throws <(@modulo 0 <>)> "alien argument")
+    (@throws <(@modulo "" 0)> "alien argument")
+    (@throws <(@modulo "" "")> "alien argument")
+    (@throws <(@modulo "" [])> "alien argument")
+    (@throws <(@modulo "" <>)> "alien argument")
+    (@throws <(@modulo [] 0)> "alien argument")
+    (@throws <(@modulo [] "")> "alien argument")
+    (@throws <(@modulo [] [])> "alien argument")
+    (@throws <(@modulo [] <>)> "alien argument")
+    (@throws <(@modulo <> 0)> "alien argument")
+    (@throws <(@modulo <> "")> "alien argument")
+    (@throws <(@modulo <> [])> "alien argument")
+    (@throws <(@modulo <> <>)> "alien argument")
   /
 
   \
@@ -710,6 +766,7 @@ catch
     (@throws <(@increment 2147483647)> "arithmetic error")
     (@throws <(@increment)> "absent argument")
     (@throws <(@increment "")> "alien argument")
+    (@throws <(@increment [])> "alien argument")
     (@throws <(@increment <>)> "alien argument")
   /
 
@@ -723,6 +780,7 @@ catch
     (@throws <(@decrement -2147483647)> "arithmetic error")
     (@throws <(@decrement)> "absent argument")
     (@throws <(@decrement "")> "alien argument")
+    (@throws <(@decrement [])> "alien argument")
     (@throws <(@decrement <>)> "alien argument")
   /
 
@@ -987,9 +1045,17 @@ catch
     (@throws <(@slice 0 0 0)> "alien argument")
     (@throws <(@slice <> 0 0)> "alien argument")
     (@throws <(@slice "" "" 0)> "alien argument")
+    (@throws <(@slice "" [] 0)> "alien argument")
     (@throws <(@slice "" <> 0)> "alien argument")
     (@throws <(@slice "" 0 "")> "alien argument")
+    (@throws <(@slice "" 0 [])> "alien argument")
     (@throws <(@slice "" 0 <>)> "alien argument")
+    (@throws <(@slice [] "" 0)> "alien argument")
+    (@throws <(@slice [] [] 0)> "alien argument")
+    (@throws <(@slice [] <> 0)> "alien argument")
+    (@throws <(@slice [] 0 "")> "alien argument")
+    (@throws <(@slice [] 0 [])> "alien argument")
+    (@throws <(@slice [] 0 <>)> "alien argument")
   /
 
   \
@@ -1007,12 +1073,19 @@ catch
     (@returns <(@merge ["l" "l"] ["r" "r" "r" "r"])> ["l" "l" "r" "r" "r" "r"])
     (@throws <(@merge)> "absent argument")
     (@throws <(@merge "")> "absent argument")
+    (@throws <(@merge 0 0)> "alien argument")
     (@throws <(@merge 0 "")> "alien argument")
+    (@throws <(@merge 0 [])> "alien argument")
+    (@throws <(@merge 0 <>)> "alien argument")
     (@throws <(@merge "" 0)> "alien argument")
-    (@throws <(@merge [] "")> "alien argument")
     (@throws <(@merge "" [])> "alien argument")
-    (@throws <(@merge <> "")> "alien argument")
     (@throws <(@merge "" <>)> "alien argument")
+    (@throws <(@merge [] 0)> "alien argument")
+    (@throws <(@merge [] "")> "alien argument")
+    (@throws <(@merge [] <>)> "alien argument")
+    (@throws <(@merge <> 0)> "alien argument")
+    (@throws <(@merge <> "")> "alien argument")
+    (@throws <(@merge <> [])> "alien argument")
   /
 
   \
@@ -1108,6 +1181,7 @@ catch
       (@throws <(@read)> "absent argument")
       (@throws <(@read "")> "absent argument")
       (@throws <(@read "" 0)> "alien argument")
+      (@throws <(@read "" [])> "alien argument")
       (@throws <(@read "" <>)> "alien argument")
     /
   /
@@ -1140,6 +1214,7 @@ catch
       (@throws <(@write)> "absent argument")
       (@throws <(@write "")> "absent argument")
       (@throws <(@write "" 0)> "alien argument")
+      (@throws <(@write "" [])> "alien argument")
       (@throws <(@write "" <>)> "alien argument")
     /
   /
@@ -1167,6 +1242,7 @@ catch
       (@throws <(@delete 3)> "io error")
       (@throws <(@delete "")> "io error")
       (@throws <(@delete)> "absent argument")
+      (@throws <(@delete [])> "alien argument")
       (@throws <(@delete <>)> "alien argument")
     /
   /
@@ -1178,6 +1254,7 @@ catch
     (@throws <(@exit -1)> "damaged argument")
     (@throws <(@exit 256)> "damaged argument")
     (@throws <(@exit "")> "alien argument")
+    (@throws <(@exit [])> "alien argument")
     (@throws <(@exit <>)> "alien argument")
   /
 
@@ -1189,6 +1266,7 @@ catch
     (@throws <(@query "__absent__")> "absent environment variable")
     (@throws <(@query)> "absent argument")
     (@throws <(@query 0)> "alien argument")
+    (@throws <(@query [])> "alien argument")
     (@throws <(@query <>)> "alien argument")
   /
 
@@ -1309,6 +1387,7 @@ catch
     (@throws <(<(@evaluate "argument 4")> "a" "b" "c")> "absent argument")
     (@throws <(@evaluate)> "absent argument")
     (@throws <(@evaluate 0)> "alien argument")
+    (@throws <(@evaluate [])> "alien argument")
     (@throws <(@evaluate <>)> "alien argument")
   /
 
