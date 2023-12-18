@@ -563,6 +563,10 @@ catch
     (@returns <\ /> "")
     (@returns <\ "a" /> "a")
     (@returns <\ "a" "b" "c" /> "c")
+    (@returns <\ 0 /> 0)
+    (@returns <\ "" /> "")
+    (@returns <\ [] /> [])
+    (@returns <\ <> /> <>)
     (@parseFails "\\")
     (@parseFails "/")
   /
