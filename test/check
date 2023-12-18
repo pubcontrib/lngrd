@@ -376,7 +376,10 @@ catch
     "expression/invoke" |@suite
 
     (@returns <(<>)> "")
-    (@returns <(<"x">)> "x")
+    (@returns <(<0>)> 0)
+    (@returns <(<"">)> "")
+    (@returns <(<[]>)> [])
+    (@returns <(<<>>)> <>)
     (@throws <(<throw "error">)> "error")
     (@returns <<"x"> |$f ($f) ($f) ($f)> "x")
     (@returns <(catch \ throw <"x"> /)> "x")
