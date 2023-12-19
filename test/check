@@ -201,6 +201,7 @@ catch
     (@parseFails "+2147483648")
     (@lexFails "--100")
     (@lexFails "++100")
+    (@lexFails "+junk")
   /
 
   \
@@ -224,6 +225,7 @@ catch
     (@parseFails "\"\\x0\"")
     (@parseFails "\"\\x0z\"")
     (@parseFails "\"\\xz0\"")
+    (@lexFails "\"junk")
   /
 
   \
@@ -238,6 +240,8 @@ catch
     (@returns <[[[[[[[[[["x"]]]]]]]]]]> [[[[[[[[[["x"]]]]]]]]]])
     (@parseFails "[")
     (@parseFails "]")
+    (@parseFails "[1")
+    (@parseFails "[1 2")
     (@parseFails "[$variable]")
     (@parseFails "[0 |$variable]")
     (@parseFails "[%$variable]")
@@ -248,6 +252,7 @@ catch
     (@parseFails "[throw \"error\"]")
     (@parseFails "[argument 1]")
     (@parseFails "[\\ /]")
+    (@lexFails "[junk")
   /
 
   \
@@ -291,6 +296,9 @@ catch
     (@returns <@classify> <(@classify argument 1)>)
     (@parseFails "<")
     (@parseFails ">")
+    (@parseFails "<0")
+    (@parseFails "<0 |$variable")
+    (@lexFails "<junk")
   /
 
   \
@@ -400,6 +408,9 @@ catch
     (@throws <(@write 2 "text" $invalid)> "absent variable")
     (@parseFails "(")
     (@parseFails ")")
+    (@parseFails "(@add")
+    (@parseFails "(@add 0")
+    (@lexFails "(@add junk")
   /
 
   \
@@ -464,6 +475,9 @@ catch
     (@returns <(@evaluate "if 0 0 else if 0 0 else 0 ")> 0)
     (@parseFails "else")
     (@parseFails "else if")
+    (@lexFails "if junk")
+    (@lexFails "if 0 0 else junk")
+    (@parseFails "if 0 0 else else")
   /
 
   \
@@ -492,6 +506,7 @@ catch
     (@returns <0 |$i while (@precedes $i 100) \ (@add $i 1) |$i / $i> 100)
     (@parseFails "while")
     (@parseFails "while \"\"")
+    (@lexFails "while junk")
   /
 
   \
@@ -504,6 +519,7 @@ catch
     (@returns <catch \ <> /> "")
     (@returns <catch \ $missing /> "absent variable")
     (@parseFails "catch")
+    (@lexFails "catch junk")
   /
 
   \
@@ -518,6 +534,7 @@ catch
     (@returns <(catch \ throw @add / 0 1)> 1)
     (@throws <throw throw "error"> "error")
     (@parseFails "throw")
+    (@lexFails "throw junk")
   /
 
   \
@@ -555,6 +572,7 @@ catch
     (@throws <argument []> "alien argument")
     (@throws <argument <>> "alien argument")
     (@parseFails "argument")
+    (@lexFails "argument junk")
   /
 
   \
@@ -569,6 +587,9 @@ catch
     (@returns <\ <> /> <>)
     (@parseFails "\\")
     (@parseFails "/")
+    (@parseFails "\\ \"a\"")
+    (@parseFails "\\ \"a\" \"b\"")
+    (@lexFails "\\ junk")
   /
 
   \
