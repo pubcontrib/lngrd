@@ -1408,17 +1408,6 @@ catch
   /
 
   \
-    "built-in/exit" |@suite
-
-    (@throws <(@exit -1)> "damaged argument")
-    (@throws <(@exit 256)> "damaged argument")
-    (@throws <(@exit)> "absent argument")
-    (@throws <(@exit "")> "alien argument")
-    (@throws <(@exit [])> "alien argument")
-    (@throws <(@exit <>)> "alien argument")
-  /
-
-  \
     "built-in/query" |@suite
 
     (@returns <(@classify (@query "TERM"))> "string")
@@ -1428,6 +1417,17 @@ catch
     (@throws <(@query 0)> "alien argument")
     (@throws <(@query [])> "alien argument")
     (@throws <(@query <>)> "alien argument")
+  /
+
+  \
+    "built-in/exit" |@suite
+
+    (@throws <(@exit -1)> "damaged argument")
+    (@throws <(@exit 256)> "damaged argument")
+    (@throws <(@exit)> "absent argument")
+    (@throws <(@exit "")> "alien argument")
+    (@throws <(@exit [])> "alien argument")
+    (@throws <(@exit <>)> "alien argument")
   /
 
   \
