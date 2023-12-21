@@ -18,6 +18,8 @@ catch
     0 |@persistence
   /
 /
+31 |@red
+32 |@green
 
 <
   argument 1 |$status
@@ -69,7 +71,7 @@ catch
 
   if (@not $clear)
   \
-    (@writeStatus "FAIL" 31)
+    (@writeStatus "FAIL" @red)
     (@writeDetail "Reason" "an unexpected error was thrown")
     (@writeDetail "Suite" @suite)
     (@writeDetail "Source" (@serialize $do))
@@ -79,7 +81,7 @@ catch
 
   if (@not (@equals $returned $expected))
   \
-    (@writeStatus "FAIL" 31)
+    (@writeStatus "FAIL" @red)
     (@writeDetail "Reason" "an unexpected value was returned")
     (@writeDetail "Suite" @suite)
     (@writeDetail "Source" (@serialize $do))
@@ -98,7 +100,7 @@ catch
 
   if $clear
   \
-    (@writeStatus "FAIL" 31)
+    (@writeStatus "FAIL" @red)
     (@writeDetail "Reason" "an expected error was not thrown")
     (@writeDetail "Suite" @suite)
     (@writeDetail "Source" (@serialize $do))
@@ -108,7 +110,7 @@ catch
 
   if (@not (@equals $thrown $expected))
   \
-    (@writeStatus "FAIL" 31)
+    (@writeStatus "FAIL" @red)
     (@writeDetail "Reason" "an unexpected error was thrown")
     (@writeDetail "Suite" @suite)
     (@writeDetail "Source" (@serialize $do))
@@ -126,7 +128,7 @@ catch
 
   if $clear
   \
-    (@writeStatus "FAIL" 31)
+    (@writeStatus "FAIL" @red)
     (@writeDetail "Reason" "an expected error was not thrown")
     (@writeDetail "Suite" @suite)
     (@writeDetail "Source" (@serialize $source))
@@ -138,7 +140,7 @@ catch
 
   if (@not (@equals $thrown $expected))
   \
-    (@writeStatus "FAIL" 31)
+    (@writeStatus "FAIL" @red)
     (@writeDetail "Reason" "an unexpected error was thrown")
     (@writeDetail "Suite" @suite)
     (@writeDetail "Source" (@serialize $source))
@@ -156,7 +158,7 @@ catch
 
   if $clear
   \
-    (@writeStatus "FAIL" 31)
+    (@writeStatus "FAIL" @red)
     (@writeDetail "Reason" "an expected error was not thrown")
     (@writeDetail "Suite" @suite)
     (@writeDetail "Source" (@serialize $source))
@@ -168,7 +170,7 @@ catch
 
   if (@not (@equals $thrown $expected))
   \
-    (@writeStatus "FAIL" 31)
+    (@writeStatus "FAIL" @red)
     (@writeDetail "Reason" "an unexpected error was thrown")
     (@writeDetail "Suite" @suite)
     (@writeDetail "Source" (@serialize $source))
@@ -1764,4 +1766,4 @@ if $error
   (@exit 1)
 /
 
-(@writeStatus "PASS" 32)
+(@writeStatus "PASS" @green)
