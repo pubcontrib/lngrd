@@ -2,20 +2,20 @@
 
 "" |@suite
 2 |@stderr
-1 |@color
+1 |@useColor
 catch
 \
   if (@query "NO_COLOR")
   \
-    0 |@color
+    0 |@useColor
   /
 /
-1 |@persistence
+1 |@usePersistence
 catch
 \
   if (@query "NO_PERSISTENCE")
   \
-    0 |@persistence
+    0 |@usePersistence
   /
 /
 31 |@red
@@ -25,7 +25,7 @@ catch
   argument 1 |$status
   argument 2 |$color
 
-  if @color
+  if @useColor
   \
     (@write @stderr "\x1b[7;")
     (@write @stderr (@serialize $color))
@@ -45,7 +45,7 @@ catch
   argument 1 |$header
   argument 2 |$value
 
-  if @color
+  if @useColor
   \
     (@write @stderr "\x1b[1m")
     (@write @stderr $header)
@@ -1225,7 +1225,7 @@ catch
   \
     "built-in/read" |@suite
 
-    if @persistence
+    if @usePersistence
     \
       (@returns <
   "/tmp" |$directory
@@ -1337,7 +1337,7 @@ catch
   \
     "built-in/write" |@suite
 
-    if @persistence
+    if @usePersistence
     \
       (@returns <
   "/tmp" |$directory
@@ -1384,7 +1384,7 @@ catch
   \
     "built-in/delete" |@suite
 
-    if @persistence
+    if @usePersistence
     \
       (@returns <
   "/tmp" |$directory
