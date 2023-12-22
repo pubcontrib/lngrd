@@ -3,21 +3,9 @@
 "" |@suite
 2 |@stderr
 1 |@useColor
-catch
-\
-  if (@query "NO_COLOR")
-  \
-    0 |@useColor
-  /
-/
+catch \ if (@query "NO_COLOR") \ 0 |@useColor / /
 1 |@usePersistence
-catch
-\
-  if (@query "NO_PERSISTENCE")
-  \
-    0 |@usePersistence
-  /
-/
+catch \ if (@query "NO_PERSISTENCE") \ 0 |@usePersistence / /
 31 |@red
 32 |@green
 
