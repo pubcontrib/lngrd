@@ -389,6 +389,7 @@ static void do_precedes_work(lngrd_Executer *executer);
 static void do_succeeds_work(lngrd_Executer *executer);
 static void do_equals_work(lngrd_Executer *executer);
 static void do_get_work(lngrd_Executer *executer);
+static void do_set_work(lngrd_Executer *executer);
 static void do_measure_work(lngrd_Executer *executer);
 static void do_slice_work(lngrd_Executer *executer);
 static void do_merge_work(lngrd_Executer *executer);
@@ -1246,6 +1247,7 @@ LNGRD_API void lngrd_start_executer(lngrd_Executer *executer, lngrd_List *pyre)
     set_global_function("succeeds", "<(@succeeds argument 1 argument 2)>", do_succeeds_work, executer);
     set_global_function("equals", "<(@equals argument 1 argument 2)>", do_equals_work, executer);
     set_global_function("get", "<(@get argument 1 argument 2)>", do_get_work, executer);
+    set_global_function("set", "<(@set argument 1 argument 2 argument 3)>", do_set_work, executer);
     set_global_function("measure", "<(@measure argument 1)>", do_measure_work, executer);
     set_global_function("slice", "<(@slice argument 1 argument 2 argument 3)>", do_slice_work, executer);
     set_global_function("merge", "<(@merge argument 1 argument 2)>", do_merge_work, executer);
@@ -2855,6 +2857,140 @@ static void do_get_work(lngrd_Executer *executer)
             }
 
             set_executor_result(list->items[number->value - 1], executer);
+
+            break;
+        }
+
+        default:
+            crash_with_message("unsupported branch");
+    }
+}
+
+static void do_set_work(lngrd_Executer *executer)
+{
+    lngrd_Block *collection, *key, *item;
+
+    if (!require_argument(1, LNGRD_BLOCK_TYPE_STRING | LNGRD_BLOCK_TYPE_LIST, executer, &collection)
+            || !require_argument(2, LNGRD_BLOCK_TYPE_NUMBER, executer, &key))
+    {
+        return;
+    }
+
+    switch (collection->type)
+    {
+        case LNGRD_BLOCK_TYPE_STRING:
+        {
+            lngrd_Number *number;
+            lngrd_String *source, *addition, *destination;
+            char *bytes;
+            size_t length, before, after;
+
+            if (!require_argument(3, LNGRD_BLOCK_TYPE_STRING, executer, &item))
+            {
+                return;
+            }
+
+            number = (lngrd_Number *) key->data;
+
+            if (number->layout != LNGRD_NUMBER_LAYOUT_32_0)
+            {
+                set_executer_error("damaged argument", executer);
+                return;
+            }
+
+            source = (lngrd_String *) collection->data;
+
+            if (number->value < 1 || (size_t) number->value > source->length)
+            {
+                set_executer_error("absent key", executer);
+                return;
+            }
+
+            addition = (lngrd_String *) item->data;
+
+            if (!can_fit_both(source->length - 1, addition->length))
+            {
+                set_executer_error("boundary error", executer);
+                return;
+            }
+
+            length = source->length - 1 + addition->length;
+
+            if (length > LNGRD_INT_LIMIT)
+            {
+                set_executer_error("boundary error", executer);
+                return;
+            }
+
+            before = number->value - 1;
+            after = source->length - before - 1;
+            bytes = (char *) allocate(length, sizeof(char));
+            destination = create_string(bytes, length);
+
+            if (before > 0)
+            {
+                memcpy(bytes, source->bytes, before);
+            }
+
+            if (addition->length > 0)
+            {
+                memcpy(bytes + before, addition->bytes, addition->length);
+            }
+
+            if (after > 0)
+            {
+                memcpy(bytes + before + addition->length, source->bytes + before + 1, after);
+            }
+
+            set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, destination, 0), executer);
+
+            break;
+        }
+
+        case LNGRD_BLOCK_TYPE_LIST:
+        {
+            lngrd_Number *number;
+            lngrd_List *source, *destination;
+            size_t index;
+
+            if (!require_argument(3, LNGRD_BLOCK_TYPE_NUMBER | LNGRD_BLOCK_TYPE_STRING | LNGRD_BLOCK_TYPE_LIST | LNGRD_BLOCK_TYPE_FUNCTION, executer, &item))
+            {
+                return;
+            }
+
+            number = (lngrd_Number *) key->data;
+
+            if (number->layout != LNGRD_NUMBER_LAYOUT_32_0)
+            {
+                set_executer_error("damaged argument", executer);
+                return;
+            }
+
+            source = (lngrd_List *) collection->data;
+
+            if (number->value < 1 || (size_t) number->value > source->length)
+            {
+                set_executer_error("absent key", executer);
+                return;
+            }
+
+            destination = create_list();
+
+            for (index = 0; index < source->length; index++)
+            {
+                if (index != (size_t) number->value - 1)
+                {
+                    source->items[index]->references += 1;
+                    push_list_item(destination, source->items[index]);
+                }
+                else
+                {
+                    item->references += 1;
+                    push_list_item(destination, item);
+                }
+            }
+
+            set_executor_result(create_block(LNGRD_BLOCK_TYPE_LIST, destination, 0), executer);
 
             break;
         }
