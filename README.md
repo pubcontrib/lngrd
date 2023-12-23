@@ -61,5 +61,5 @@
 
     # built-ins
     @add @subtract @multiply @divide @modulo @increment @decrement @and @or @not
-    @precedes @succeeds @equals @measure @slice @merge @read @write @delete
+    @precedes @succeeds @equals @get @measure @slice @merge @read @write @delete
     @query @exit @serialize @deserialize @classify @evaluate

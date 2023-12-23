@@ -388,6 +388,7 @@ static void do_not_work(lngrd_Executer *executer);
 static void do_precedes_work(lngrd_Executer *executer);
 static void do_succeeds_work(lngrd_Executer *executer);
 static void do_equals_work(lngrd_Executer *executer);
+static void do_get_work(lngrd_Executer *executer);
 static void do_measure_work(lngrd_Executer *executer);
 static void do_slice_work(lngrd_Executer *executer);
 static void do_merge_work(lngrd_Executer *executer);
@@ -1244,6 +1245,7 @@ LNGRD_API void lngrd_start_executer(lngrd_Executer *executer, lngrd_List *pyre)
     set_global_function("precedes", "<(@precedes argument 1 argument 2)>", do_precedes_work, executer);
     set_global_function("succeeds", "<(@succeeds argument 1 argument 2)>", do_succeeds_work, executer);
     set_global_function("equals", "<(@equals argument 1 argument 2)>", do_equals_work, executer);
+    set_global_function("get", "<(@get argument 1 argument 2)>", do_get_work, executer);
     set_global_function("measure", "<(@measure argument 1)>", do_measure_work, executer);
     set_global_function("slice", "<(@slice argument 1 argument 2 argument 3)>", do_slice_work, executer);
     set_global_function("merge", "<(@merge argument 1 argument 2)>", do_merge_work, executer);
@@ -2787,6 +2789,79 @@ static void do_equals_work(lngrd_Executer *executer)
     }
 
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, compare_blocks(left, right, executer->sketches, executer->doodles) == 0), 0), executer);
+}
+
+static void do_get_work(lngrd_Executer *executer)
+{
+    lngrd_Block *collection, *key;
+
+    if (!require_argument(1, LNGRD_BLOCK_TYPE_STRING | LNGRD_BLOCK_TYPE_LIST, executer, &collection)
+            || !require_argument(2, LNGRD_BLOCK_TYPE_NUMBER, executer, &key))
+    {
+        return;
+    }
+
+    switch (collection->type)
+    {
+        case LNGRD_BLOCK_TYPE_STRING:
+        {
+            lngrd_Number *number;
+            lngrd_String *string;
+            char *bytes;
+
+            number = (lngrd_Number *) key->data;
+
+            if (number->layout != LNGRD_NUMBER_LAYOUT_32_0)
+            {
+                set_executer_error("damaged argument", executer);
+                return;
+            }
+
+            string = (lngrd_String *) collection->data;
+
+            if (number->value < 1 || (size_t) number->value > string->length)
+            {
+                set_executer_error("absent key", executer);
+                return;
+            }
+
+            bytes = (char *) allocate(1, sizeof(char));
+            bytes[0] = string->bytes[number->value - 1];
+
+            set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, create_string(bytes, 1), 0), executer);
+
+            break;
+        }
+
+        case LNGRD_BLOCK_TYPE_LIST:
+        {
+            lngrd_Number *number;
+            lngrd_List *list;
+
+            number = (lngrd_Number *) key->data;
+
+            if (number->layout != LNGRD_NUMBER_LAYOUT_32_0)
+            {
+                set_executer_error("damaged argument", executer);
+                return;
+            }
+
+            list = (lngrd_List *) collection->data;
+
+            if (number->value < 1 || (size_t) number->value > list->length)
+            {
+                set_executer_error("absent key", executer);
+                return;
+            }
+
+            set_executor_result(list->items[number->value - 1], executer);
+
+            break;
+        }
+
+        default:
+            crash_with_message("unsupported branch");
+    }
 }
 
 static void do_measure_work(lngrd_Executer *executer)
