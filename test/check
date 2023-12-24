@@ -275,6 +275,7 @@ catch
     (@returns <@equals> <(@equals argument 1 argument 2)>)
     (@returns <@get> <(@get argument 1 argument 2)>)
     (@returns <@set> <(@set argument 1 argument 2 argument 3)>)
+    (@returns <@unset> <(@unset argument 1 argument 2)>)
     (@returns <@measure> <(@measure argument 1)>)
     (@returns <@slice> <(@slice argument 1 argument 2 argument 3)>)
     (@returns <@merge> <(@merge argument 1 argument 2)>)
@@ -1187,6 +1188,42 @@ catch
   /
 
   \
+    "built-in/unset" |@suite
+
+    (@returns <(@unset "abc" 1)> "bc")
+    (@returns <(@unset "abc" 2)> "ac")
+    (@returns <(@unset "abc" 3)> "ab")
+    (@returns <(@unset ["a" "b" "c"] 1)> ["b" "c"])
+    (@returns <(@unset ["a" "b" "c"] 2)> ["a" "c"])
+    (@returns <(@unset ["a" "b" "c"] 3)> ["a" "b"])
+    (@returns <(@unset "a" 1)> "")
+    (@returns <(@unset ["a"] 1)> [])
+    (@throws <(@unset "abc" 0)> "absent key")
+    (@throws <(@unset "abc" 4)> "absent key")
+    (@throws <(@unset ["a" "b" "c"] 0)> "absent key")
+    (@throws <(@unset ["a" "b" "c"] 4)> "absent key")
+    (@throws <(@unset)> "absent argument")
+    (@throws <(@unset 0)> "alien argument")
+    (@throws <(@unset 0 0)> "alien argument")
+    (@throws <(@unset 0 "")> "alien argument")
+    (@throws <(@unset 0 [])> "alien argument")
+    (@throws <(@unset 0 <>)> "alien argument")
+    (@throws <(@unset "")> "absent argument")
+    (@throws <(@unset "" "")> "alien argument")
+    (@throws <(@unset "" [])> "alien argument")
+    (@throws <(@unset "" <>)> "alien argument")
+    (@throws <(@unset [])> "absent argument")
+    (@throws <(@unset [] "")> "alien argument")
+    (@throws <(@unset [] [])> "alien argument")
+    (@throws <(@unset [] <>)> "alien argument")
+    (@throws <(@unset <>)> "alien argument")
+    (@throws <(@unset <> 0)> "alien argument")
+    (@throws <(@unset <> "")> "alien argument")
+    (@throws <(@unset <> [])> "alien argument")
+    (@throws <(@unset <> <>)> "alien argument")
+  /
+
+  \
     "built-in/measure" |@suite
 
     (@returns <(@measure "")> 0)
@@ -1609,6 +1646,7 @@ catch
     (@returns <(@serialize @equals)> "<(@equals argument 1 argument 2)>")
     (@returns <(@serialize @get)> "<(@get argument 1 argument 2)>")
     (@returns <(@serialize @set)> "<(@set argument 1 argument 2 argument 3)>")
+    (@returns <(@serialize @unset)> "<(@unset argument 1 argument 2)>")
     (@returns <(@serialize @measure)> "<(@measure argument 1)>")
     (@returns <(@serialize @slice)> "<(@slice argument 1 argument 2 argument 3)>")
     (@returns <(@serialize @merge)> "<(@merge argument 1 argument 2)>")

@@ -390,6 +390,7 @@ static void do_succeeds_work(lngrd_Executer *executer);
 static void do_equals_work(lngrd_Executer *executer);
 static void do_get_work(lngrd_Executer *executer);
 static void do_set_work(lngrd_Executer *executer);
+static void do_unset_work(lngrd_Executer *executer);
 static void do_measure_work(lngrd_Executer *executer);
 static void do_slice_work(lngrd_Executer *executer);
 static void do_merge_work(lngrd_Executer *executer);
@@ -1248,6 +1249,7 @@ LNGRD_API void lngrd_start_executer(lngrd_Executer *executer, lngrd_List *pyre)
     set_global_function("equals", "<(@equals argument 1 argument 2)>", do_equals_work, executer);
     set_global_function("get", "<(@get argument 1 argument 2)>", do_get_work, executer);
     set_global_function("set", "<(@set argument 1 argument 2 argument 3)>", do_set_work, executer);
+    set_global_function("unset", "<(@unset argument 1 argument 2)>", do_unset_work, executer);
     set_global_function("measure", "<(@measure argument 1)>", do_measure_work, executer);
     set_global_function("slice", "<(@slice argument 1 argument 2 argument 3)>", do_slice_work, executer);
     set_global_function("merge", "<(@merge argument 1 argument 2)>", do_merge_work, executer);
@@ -2987,6 +2989,104 @@ static void do_set_work(lngrd_Executer *executer)
                 {
                     item->references += 1;
                     push_list_item(destination, item);
+                }
+            }
+
+            set_executor_result(create_block(LNGRD_BLOCK_TYPE_LIST, destination, 0), executer);
+
+            break;
+        }
+
+        default:
+            crash_with_message("unsupported branch");
+    }
+}
+
+static void do_unset_work(lngrd_Executer *executer)
+{
+    lngrd_Block *collection, *key;
+
+    if (!require_argument(1, LNGRD_BLOCK_TYPE_STRING | LNGRD_BLOCK_TYPE_LIST, executer, &collection)
+            || !require_argument(2, LNGRD_BLOCK_TYPE_NUMBER, executer, &key))
+    {
+        return;
+    }
+
+    switch (collection->type)
+    {
+        case LNGRD_BLOCK_TYPE_STRING:
+        {
+            lngrd_Number *number;
+            lngrd_String *source, *destination;
+            char *bytes;
+            size_t length;
+
+            number = (lngrd_Number *) key->data;
+
+            if (number->layout != LNGRD_NUMBER_LAYOUT_32_0)
+            {
+                set_executer_error("damaged argument", executer);
+                return;
+            }
+
+            source = (lngrd_String *) collection->data;
+
+            if (number->value < 1 || (size_t) number->value > source->length)
+            {
+                set_executer_error("absent key", executer);
+                return;
+            }
+
+            length = source->length - 1;
+
+            if (length > 1)
+            {
+                bytes = (char *) allocate(length, sizeof(char));
+                memcpy(bytes, source->bytes, number->value - 1);
+                memcpy(bytes + number->value - 1, source->bytes + number->value, source->length - number->value);
+            }
+            else
+            {
+                bytes = NULL;
+            }
+
+            destination = create_string(bytes, length);
+
+            set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, destination, 0), executer);
+
+            break;
+        }
+
+        case LNGRD_BLOCK_TYPE_LIST:
+        {
+            lngrd_Number *number;
+            lngrd_List *source, *destination;
+            size_t index;
+
+            number = (lngrd_Number *) key->data;
+
+            if (number->layout != LNGRD_NUMBER_LAYOUT_32_0)
+            {
+                set_executer_error("damaged argument", executer);
+                return;
+            }
+
+            source = (lngrd_List *) collection->data;
+
+            if (number->value < 1 || (size_t) number->value > source->length)
+            {
+                set_executer_error("absent key", executer);
+                return;
+            }
+
+            destination = create_list();
+
+            for (index = 0; index < source->length; index++)
+            {
+                if (index != (size_t) number->value - 1)
+                {
+                    source->items[index]->references += 1;
+                    push_list_item(destination, source->items[index]);
                 }
             }
 
