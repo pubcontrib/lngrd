@@ -394,6 +394,7 @@ static void do_unset_work(lngrd_Executer *executer);
 static void do_measure_work(lngrd_Executer *executer);
 static void do_slice_work(lngrd_Executer *executer);
 static void do_merge_work(lngrd_Executer *executer);
+static void do_sort_work(lngrd_Executer *executer);
 static void do_read_work(lngrd_Executer *executer);
 static void do_write_work(lngrd_Executer *executer);
 static void do_delete_work(lngrd_Executer *executer);
@@ -430,6 +431,8 @@ static lngrd_List *create_list(void);
 static void push_list_item(lngrd_List *list, lngrd_Block *item);
 static lngrd_Block *pop_list_item(lngrd_List *list);
 static lngrd_Block *peek_list_item(lngrd_List *list);
+static lngrd_List *copy_list(lngrd_List *list);
+static void sort_list(lngrd_List *list, lngrd_List *sketches, lngrd_List *doodles);
 static void burn_list(lngrd_List *list, lngrd_List *pyre);
 static lngrd_Map *create_map(void);
 static lngrd_Block *get_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_List *sketches, lngrd_List *doodles);
@@ -1253,6 +1256,7 @@ LNGRD_API void lngrd_start_executer(lngrd_Executer *executer, lngrd_List *pyre)
     set_global_function("measure", "<(@measure argument 1)>", do_measure_work, executer);
     set_global_function("slice", "<(@slice argument 1 argument 2 argument 3)>", do_slice_work, executer);
     set_global_function("merge", "<(@merge argument 1 argument 2)>", do_merge_work, executer);
+    set_global_function("sort", "<(@sort argument 1)>", do_sort_work, executer);
     set_global_function("read", "<(@read argument 1 argument 2)>", do_read_work, executer);
     set_global_function("write", "<(@write argument 1 argument 2)>", do_write_work, executer);
     set_global_function("delete", "<(@delete argument 1)>", do_delete_work, executer);
@@ -3326,6 +3330,22 @@ static void do_merge_work(lngrd_Executer *executer)
     }
 }
 
+static void do_sort_work(lngrd_Executer *executer)
+{
+    lngrd_Block *list;
+    lngrd_List *sorted;
+
+    if (!require_argument(1, LNGRD_BLOCK_TYPE_LIST, executer, &list))
+    {
+        return;
+    }
+
+    sorted = copy_list((lngrd_List *) list->data);
+    sort_list(sorted, executer->sketches, executer->doodles);
+
+    set_executor_result(create_block(LNGRD_BLOCK_TYPE_LIST, sorted, 0), executer);
+}
+
 static void do_read_work(lngrd_Executer *executer)
 {
     lngrd_Block *file, *until;
@@ -4543,6 +4563,54 @@ static lngrd_Block *pop_list_item(lngrd_List *list)
 static lngrd_Block *peek_list_item(lngrd_List *list)
 {
     return list->items[list->length - 1];
+}
+
+static lngrd_List *copy_list(lngrd_List *list)
+{
+    lngrd_List *sorted;
+    size_t index;
+
+    sorted = (lngrd_List *) allocate(1, sizeof(lngrd_List));
+    sorted->items = (lngrd_Block **) allocate(list->capacity, sizeof(lngrd_Block *));
+    sorted->length = list->length;
+    sorted->capacity = list->capacity;
+
+    for (index = 0; index < sorted->length; index++)
+    {
+        sorted->items[index] = list->items[index];
+        sorted->items[index]->references += 1;
+    }
+
+    return sorted;
+}
+
+static void sort_list(lngrd_List *list, lngrd_List *sketches, lngrd_List *doodles)
+{
+    size_t cursor, swap;
+
+    for (cursor = 1; cursor < list->length; cursor++)
+    {
+        for (swap = cursor - 1;; swap--)
+        {
+            lngrd_Block *left, *right;
+
+            left = list->items[swap];
+            right = list->items[swap + 1];
+
+            if (compare_blocks(left, right, sketches, doodles) <= 0)
+            {
+                break;
+            }
+
+            list->items[swap] = right;
+            list->items[swap + 1] = left;
+
+            if (swap == 0)
+            {
+                break;
+            }
+        }
+    }
 }
 
 static void burn_list(lngrd_List *list, lngrd_List *pyre)

@@ -279,6 +279,7 @@ catch
     (@returns <@measure> <(@measure argument 1)>)
     (@returns <@slice> <(@slice argument 1 argument 2 argument 3)>)
     (@returns <@merge> <(@merge argument 1 argument 2)>)
+    (@returns <@sort> <(@sort argument 1)>)
     (@returns <@read> <(@read argument 1 argument 2)>)
     (@returns <@write> <(@write argument 1 argument 2)>)
     (@returns <@delete> <(@delete argument 1)>)
@@ -1386,6 +1387,35 @@ catch
   /
 
   \
+    "built-in/sort" |@suite
+
+    (@returns <(@sort [])> [])
+    (@returns <(@sort [0])> [0])
+    (@returns <(@sort [0 0 0])> [0 0 0])
+    (@returns <(@sort [1 2 3])> [1 2 3])
+    (@returns <(@sort [3 2 1])> [1 2 3])
+    (@returns <(@sort [""])> [""])
+    (@returns <(@sort ["" "" ""])> ["" "" ""])
+    (@returns <(@sort ["a" "b" "c"])> ["a" "b" "c"])
+    (@returns <(@sort ["c" "b" "a"])> ["a" "b" "c"])
+    (@returns <(@sort [[]])> [[]])
+    (@returns <(@sort [[] [] []])> [[] [] []])
+    (@returns <(@sort [[1] [2] [3]])> [[1] [2] [3]])
+    (@returns <(@sort [[3] [2] [1]])> [[1] [2] [3]])
+    (@returns <(@sort [<>])> [<>])
+    (@returns <(@sort [<> <> <>])> [<> <> <>])
+    (@returns <(@sort [<1> <2> <3>])> [<1> <2> <3>])
+    (@returns <(@sort [<3> <2> <1>])> [<1> <2> <3>])
+    (@returns <(@sort [0 "" [] <>])> [0 "" [] <>])
+    (@returns <(@sort [<> [] "" 0])> [0 "" [] <>])
+    (@returns <(@sort [2 [2] [1] 3 "b" [3] "c" <1> <2> 1 <3> "a"])> [1 2 3 "a" "b" "c" [1] [2] [3] <1> <2> <3>])
+    (@throws <(@sort)> "absent argument")
+    (@throws <(@sort 0)> "alien argument")
+    (@throws <(@sort "")> "alien argument")
+    (@throws <(@sort <>)> "alien argument")
+  /
+
+  \
     "built-in/read" |@suite
 
     if @usePersistence
@@ -1650,6 +1680,7 @@ catch
     (@returns <(@serialize @measure)> "<(@measure argument 1)>")
     (@returns <(@serialize @slice)> "<(@slice argument 1 argument 2 argument 3)>")
     (@returns <(@serialize @merge)> "<(@merge argument 1 argument 2)>")
+    (@returns <(@serialize @sort)> "<(@sort argument 1)>")
     (@returns <(@serialize @read)> "<(@read argument 1 argument 2)>")
     (@returns <(@serialize @write)> "<(@write argument 1 argument 2)>")
     (@returns <(@serialize @delete)> "<(@delete argument 1)>")
