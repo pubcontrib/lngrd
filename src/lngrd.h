@@ -454,6 +454,7 @@ static lngrd_Action prepare_general_action(lngrd_List *expressions, lngrd_UInt o
 static void start_buffer(lngrd_Buffer *buffer);
 static int append_buffer_bytes(lngrd_Buffer *buffer, const lngrd_String *string);
 static lngrd_String *buffer_to_string(lngrd_Buffer *buffer);
+static void abandon_buffer(lngrd_Buffer *buffer);
 static int can_fit_both(size_t left, size_t right);
 static void *allocate(size_t number, size_t size);
 static void *reallocate(void *memory, size_t number, size_t size);
@@ -3439,7 +3440,7 @@ static void do_read_work(lngrd_Executer *executer)
                 fclose(handle);
             }
 
-            free(buffer.bytes);
+            abandon_buffer(&buffer);
 
             set_executer_error("io error", executer);
             return;
@@ -3459,7 +3460,7 @@ static void do_read_work(lngrd_Executer *executer)
                 fclose(handle);
             }
 
-            free(buffer.bytes);
+            abandon_buffer(&buffer);
 
             set_executer_error("boundary error", executer);
             return;
@@ -3690,14 +3691,14 @@ static void do_serialize_work(lngrd_Executer *executer)
 
                     if (!number_to_string((lngrd_Number *) value->data, &string))
                     {
-                        free(buffer.bytes);
+                        abandon_buffer(&buffer);
                         set_executer_error("codec error", executer);
                         return;
                     }
 
                     if (!append_buffer_bytes(&buffer, string))
                     {
-                        free(buffer.bytes);
+                        abandon_buffer(&buffer);
                         set_executer_error("codec error", executer);
                         return;
                     }
@@ -3718,14 +3719,14 @@ static void do_serialize_work(lngrd_Executer *executer)
 
                     if (!escape_string((lngrd_String *) value->data, &string))
                     {
-                        free(buffer.bytes);
+                        abandon_buffer(&buffer);
                         set_executer_error("codec error", executer);
                         return;
                     }
 
                     if (!append_buffer_bytes(&buffer, string))
                     {
-                        free(buffer.bytes);
+                        abandon_buffer(&buffer);
                         set_executer_error("codec error", executer);
                         return;
                     }
@@ -3776,7 +3777,7 @@ static void do_serialize_work(lngrd_Executer *executer)
                 {
                     if (!append_buffer_bytes(&buffer, ((lngrd_Function *) value->data)->source))
                     {
-                        free(buffer.bytes);
+                        abandon_buffer(&buffer);
                         set_executer_error("codec error", executer);
                         return;
                     }
@@ -5176,6 +5177,11 @@ static lngrd_String *buffer_to_string(lngrd_Buffer *buffer)
     }
 
     return string;
+}
+
+static void abandon_buffer(lngrd_Buffer *buffer)
+{
+    free(buffer->bytes);
 }
 
 static int can_fit_both(size_t left, size_t right)
