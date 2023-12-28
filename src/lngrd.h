@@ -3353,8 +3353,9 @@ static void do_read_work(lngrd_Executer *executer)
     FILE *handle;
     int terminated, closable;
     char terminator;
-    char *buffer;
-    size_t fill, length;
+    lngrd_Buffer buffer;
+    lngrd_String expand;
+    char slot[1];
 
     if (!require_argument(1, LNGRD_BLOCK_TYPE_NUMBER | LNGRD_BLOCK_TYPE_STRING, executer, &file)
             || !require_argument(2, LNGRD_BLOCK_TYPE_STRING, executer, &until))
@@ -3421,9 +3422,9 @@ static void do_read_work(lngrd_Executer *executer)
         return;
     }
 
-    fill = 0;
-    length = 64;
-    buffer = (char *) allocate(length, sizeof(char));
+    start_buffer(&buffer);
+    expand.bytes = slot;
+    expand.length = 1;
 
     while (1)
     {
@@ -3438,7 +3439,7 @@ static void do_read_work(lngrd_Executer *executer)
                 fclose(handle);
             }
 
-            free(buffer);
+            free(buffer.bytes);
 
             set_executer_error("io error", executer);
             return;
@@ -3449,39 +3450,20 @@ static void do_read_work(lngrd_Executer *executer)
             break;
         }
 
-        if (fill == length)
+        slot[0] = symbol;
+
+        if (!append_buffer_bytes(&buffer, &expand))
         {
-            char *swap;
-
-            if (length < 1073741824L)
+            if (closable)
             {
-                length *= 2;
-            }
-            else if (length == 1073741824L)
-            {
-                length = LNGRD_INT_LIMIT;
-            }
-            else
-            {
-                if (closable)
-                {
-                    fclose(handle);
-                }
-
-                free(buffer);
-
-                set_executer_error("boundary error", executer);
-                return;
+                fclose(handle);
             }
 
-            length *= 2;
-            swap = (char *) allocate(length, sizeof(char));
-            memcpy(swap, buffer, fill);
-            free(buffer);
-            buffer = swap;
+            free(buffer.bytes);
+
+            set_executer_error("boundary error", executer);
+            return;
         }
-
-        buffer[fill++] = symbol;
     }
 
     if (closable)
@@ -3489,7 +3471,7 @@ static void do_read_work(lngrd_Executer *executer)
         fclose(handle);
     }
 
-    set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, create_string(buffer, fill), 0), executer);
+    set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, buffer_to_string(&buffer), 0), executer);
 }
 
 static void do_write_work(lngrd_Executer *executer)
@@ -5190,6 +5172,7 @@ static lngrd_String *buffer_to_string(lngrd_Buffer *buffer)
     else
     {
         string->bytes = NULL;
+        free(buffer->bytes);
     }
 
     return string;
