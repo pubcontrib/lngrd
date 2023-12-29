@@ -2869,7 +2869,7 @@ static void do_get_work(lngrd_Executer *executer)
         }
 
         default:
-            crash_with_message("unsupported branch");
+            break;
     }
 }
 
@@ -3003,7 +3003,7 @@ static void do_set_work(lngrd_Executer *executer)
         }
 
         default:
-            crash_with_message("unsupported branch");
+            break;
     }
 }
 
@@ -3101,7 +3101,7 @@ static void do_unset_work(lngrd_Executer *executer)
         }
 
         default:
-            crash_with_message("unsupported branch");
+            break;
     }
 }
 
@@ -3221,10 +3221,6 @@ static void do_slice_work(lngrd_Executer *executer)
 
         set_executor_result(create_block(LNGRD_BLOCK_TYPE_LIST, result, 0), executer);
     }
-    else
-    {
-        crash_with_message("unsupported branch");
-    }
 }
 
 static void do_merge_work(lngrd_Executer *executer)
@@ -3324,10 +3320,6 @@ static void do_merge_work(lngrd_Executer *executer)
         }
 
         set_executor_result(create_block(LNGRD_BLOCK_TYPE_LIST, result, 0), executer);
-    }
-    else
-    {
-        crash_with_message("unsupported branch");
     }
 }
 
@@ -3791,7 +3783,7 @@ static void do_serialize_work(lngrd_Executer *executer)
                 }
 
                 default:
-                    crash_with_message("unsupported branch");
+                    break;
             }
         }
         else
@@ -3863,6 +3855,8 @@ static void do_classify_work(lngrd_Executer *executer)
         return;
     }
 
+    type = (char *) "";
+
     switch (value->type)
     {
         case LNGRD_BLOCK_TYPE_NUMBER:
@@ -3886,7 +3880,7 @@ static void do_classify_work(lngrd_Executer *executer)
             break;
 
         default:
-            crash_with_message("unsupported branch");
+            break;
     }
 
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, cstring_to_string(type), 0), executer);
