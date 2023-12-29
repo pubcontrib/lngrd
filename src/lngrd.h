@@ -3117,19 +3117,18 @@ static void do_measure_work(lngrd_Executer *executer)
 
     length = 0;
 
-    if (value->type == LNGRD_BLOCK_TYPE_STRING)
+    switch (value->type)
     {
-        lngrd_String *data;
+        case LNGRD_BLOCK_TYPE_STRING:
+            length = ((lngrd_String *) value->data)->length;
+            break;
 
-        data = (lngrd_String *) value->data;
-        length = data->length;
-    }
-    else if (value->type == LNGRD_BLOCK_TYPE_LIST)
-    {
-        lngrd_List *data;
+        case LNGRD_BLOCK_TYPE_LIST:
+            length = ((lngrd_List *) value->data)->length;
+            break;
 
-        data = (lngrd_List *) value->data;
-        length = data->length;
+        default:
+            break;
     }
 
     set_executor_result(create_block(LNGRD_BLOCK_TYPE_NUMBER, create_number(LNGRD_NUMBER_LAYOUT_32_0, (lngrd_SInt) length), 0), executer);
@@ -3168,58 +3167,69 @@ static void do_slice_work(lngrd_Executer *executer)
         left = 0;
     }
 
-    if (value->type == LNGRD_BLOCK_TYPE_STRING)
+    switch (value->type)
     {
-        lngrd_String *v;
-        char *bytes;
-        size_t length;
-
-        v = (lngrd_String *) value->data;
-
-        if (right < 0 || (size_t) right >= v->length)
+        case LNGRD_BLOCK_TYPE_STRING:
         {
-            right = v->length - 1;
+            lngrd_String *v;
+            char *bytes;
+            size_t length;
+
+            v = (lngrd_String *) value->data;
+
+            if (right < 0 || (size_t) right >= v->length)
+            {
+                right = v->length - 1;
+            }
+
+            right += 1;
+            length = right - left;
+
+            if (length > 0)
+            {
+                bytes = (char *) allocate(length, sizeof(char));
+                memcpy(bytes, v->bytes + left, length);
+            }
+            else
+            {
+                bytes = NULL;
+            }
+
+            set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, create_string(bytes, length), 0), executer);
+
+            break;
         }
 
-        right += 1;
-        length = right - left;
-
-        if (length > 0)
+        case LNGRD_BLOCK_TYPE_LIST:
         {
-            bytes = (char *) allocate(length, sizeof(char));
-            memcpy(bytes, v->bytes + left, length);
-        }
-        else
-        {
-            bytes = NULL;
-        }
+            lngrd_List *v, *result;
+            size_t index, length;
 
-        set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, create_string(bytes, length), 0), executer);
-    }
-    else if (value->type == LNGRD_BLOCK_TYPE_LIST)
-    {
-        lngrd_List *v, *result;
-        size_t index, length;
+            v = (lngrd_List *) value->data;
 
-        v = (lngrd_List *) value->data;
+            if (right < 0 || (size_t) right >= v->length)
+            {
+                right = v->length - 1;
+            }
 
-        if (right < 0 || (size_t) right >= v->length)
-        {
-            right = v->length - 1;
-        }
+            right += 1;
+            length = right - left;
 
-        right += 1;
-        length = right - left;
+            result = create_list();
 
-        result = create_list();
+            for (index = 0; index < length; index++)
+            {
+                push_list_item(result, v->items[left + index]);
+                v->items[left + index]->references += 1;
+            }
 
-        for (index = 0; index < length; index++)
-        {
-            push_list_item(result, v->items[left + index]);
-            v->items[left + index]->references += 1;
+            set_executor_result(create_block(LNGRD_BLOCK_TYPE_LIST, result, 0), executer);
+
+            break;
         }
 
-        set_executor_result(create_block(LNGRD_BLOCK_TYPE_LIST, result, 0), executer);
+        default:
+            break;
     }
 }
 
@@ -3239,87 +3249,98 @@ static void do_merge_work(lngrd_Executer *executer)
         return;
     }
 
-    if (left->type == LNGRD_BLOCK_TYPE_STRING)
+    switch (left->type)
     {
-        lngrd_String *l, *r;
-        char *bytes;
-        size_t length;
-
-        l = (lngrd_String *) left->data;
-        r = (lngrd_String *) right->data;
-
-        if (!can_fit_both(l->length, r->length))
+        case LNGRD_BLOCK_TYPE_STRING:
         {
-            set_executer_error("boundary error", executer);
-            return;
+            lngrd_String *l, *r;
+            char *bytes;
+            size_t length;
+
+            l = (lngrd_String *) left->data;
+            r = (lngrd_String *) right->data;
+
+            if (!can_fit_both(l->length, r->length))
+            {
+                set_executer_error("boundary error", executer);
+                return;
+            }
+
+            length = l->length + r->length;
+
+            if (length > LNGRD_INT_LIMIT)
+            {
+                set_executer_error("boundary error", executer);
+                return;
+            }
+
+            if (length > 0)
+            {
+                bytes = (char *) allocate(length, sizeof(char));
+            }
+            else
+            {
+                bytes = NULL;
+            }
+
+            if (l->length > 0)
+            {
+                memcpy(bytes, l->bytes, l->length);
+            }
+
+            if (r->length > 0)
+            {
+                memcpy(bytes + l->length, r->bytes, r->length);
+            }
+
+            set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, create_string(bytes, length), 0), executer);
+
+            break;
         }
 
-        length = l->length + r->length;
-
-        if (length > LNGRD_INT_LIMIT)
+        case LNGRD_BLOCK_TYPE_LIST:
         {
-            set_executer_error("boundary error", executer);
-            return;
+            lngrd_List *l, *r, *result;
+            size_t index, length;
+
+            l = (lngrd_List *) left->data;
+            r = (lngrd_List *) right->data;
+
+            if (!can_fit_both(l->length, r->length))
+            {
+                set_executer_error("boundary error", executer);
+                return;
+            }
+
+            length = l->length + r->length;
+
+            if (length > LNGRD_INT_LIMIT)
+            {
+                set_executer_error("boundary error", executer);
+                return;
+            }
+
+            result = create_list();
+
+            for (index = 0; index < l->length; index++)
+            {
+                push_list_item(result, l->items[index]);
+                l->items[index]->references += 1;
+            }
+
+            for (index = 0; index < r->length; index++)
+            {
+                push_list_item(result, r->items[index]);
+                r->items[index]->references += 1;
+            }
+
+            set_executor_result(create_block(LNGRD_BLOCK_TYPE_LIST, result, 0), executer);
+
+            break;
         }
 
-        if (length > 0)
-        {
-            bytes = (char *) allocate(length, sizeof(char));
-        }
-        else
-        {
-            bytes = NULL;
-        }
-
-        if (l->length > 0)
-        {
-            memcpy(bytes, l->bytes, l->length);
-        }
-
-        if (r->length > 0)
-        {
-            memcpy(bytes + l->length, r->bytes, r->length);
-        }
-
-        set_executor_result(create_block(LNGRD_BLOCK_TYPE_STRING, create_string(bytes, length), 0), executer);
-    }
-    else if (left->type == LNGRD_BLOCK_TYPE_LIST)
-    {
-        lngrd_List *l, *r, *result;
-        size_t index, length;
-
-        l = (lngrd_List *) left->data;
-        r = (lngrd_List *) right->data;
-
-        if (!can_fit_both(l->length, r->length))
-        {
-            set_executer_error("boundary error", executer);
-            return;
-        }
-
-        length = l->length + r->length;
-
-        if (length > LNGRD_INT_LIMIT)
-        {
-            set_executer_error("boundary error", executer);
-            return;
-        }
-
-        result = create_list();
-
-        for (index = 0; index < l->length; index++)
-        {
-            push_list_item(result, l->items[index]);
-            l->items[index]->references += 1;
-        }
-
-        for (index = 0; index < r->length; index++)
-        {
-            push_list_item(result, r->items[index]);
-            r->items[index]->references += 1;
-        }
-
-        set_executor_result(create_block(LNGRD_BLOCK_TYPE_LIST, result, 0), executer);
+        default:
+            break;
     }
 }
 
@@ -3370,43 +3391,54 @@ static void do_read_work(lngrd_Executer *executer)
     handle = NULL;
     closable = 0;
 
-    if (file->type == LNGRD_BLOCK_TYPE_NUMBER)
+    switch (file->type)
     {
-        lngrd_Number *f;
-        lngrd_Number in, out, err;
-
-        f = (lngrd_Number *) file->data;
-        in.value = 0;
-        in.layout = LNGRD_NUMBER_LAYOUT_32_0;
-        out.value = 1;
-        out.layout = LNGRD_NUMBER_LAYOUT_32_0;
-        err.value = 2;
-        err.layout = LNGRD_NUMBER_LAYOUT_32_0;
-
-        if (compare_numbers(f, &in) == 0)
+        case LNGRD_BLOCK_TYPE_NUMBER:
         {
-            handle = stdin;
-        }
-        else if (compare_numbers(f, &out) == 0)
-        {
-            handle = stdout;
-        }
-        else if (compare_numbers(f, &err) == 0)
-        {
-            handle = stderr;
-        }
-    }
-    else if (file->type == LNGRD_BLOCK_TYPE_STRING)
-    {
-        lngrd_String *f;
-        char *cstring;
+            lngrd_Number *f;
+            lngrd_Number in, out, err;
 
-        f = (lngrd_String *) file->data;
+            f = (lngrd_Number *) file->data;
+            in.value = 0;
+            in.layout = LNGRD_NUMBER_LAYOUT_32_0;
+            out.value = 1;
+            out.layout = LNGRD_NUMBER_LAYOUT_32_0;
+            err.value = 2;
+            err.layout = LNGRD_NUMBER_LAYOUT_32_0;
 
-        cstring = string_to_cstring(f);
-        handle = fopen(cstring, "rb");
-        free(cstring);
-        closable = 1;
+            if (compare_numbers(f, &in) == 0)
+            {
+                handle = stdin;
+            }
+            else if (compare_numbers(f, &out) == 0)
+            {
+                handle = stdout;
+            }
+            else if (compare_numbers(f, &err) == 0)
+            {
+                handle = stderr;
+            }
+
+            break;
+        }
+
+        case LNGRD_BLOCK_TYPE_STRING:
+        {
+            lngrd_String *f;
+            char *cstring;
+
+            f = (lngrd_String *) file->data;
+
+            cstring = string_to_cstring(f);
+            handle = fopen(cstring, "rb");
+            free(cstring);
+            closable = 1;
+
+            break;
+        }
+
+        default:
+            break;
     }
 
     if (!handle)
@@ -3483,43 +3515,54 @@ static void do_write_work(lngrd_Executer *executer)
     handle = NULL;
     closable = 0;
 
-    if (file->type == LNGRD_BLOCK_TYPE_NUMBER)
+    switch (file->type)
     {
-        lngrd_Number *f;
-        lngrd_Number in, out, err;
-
-        f = (lngrd_Number *) file->data;
-        in.value = 0;
-        in.layout = LNGRD_NUMBER_LAYOUT_32_0;
-        out.value = 1;
-        out.layout = LNGRD_NUMBER_LAYOUT_32_0;
-        err.value = 2;
-        err.layout = LNGRD_NUMBER_LAYOUT_32_0;
-
-        if (compare_numbers(f, &in) == 0)
+        case LNGRD_BLOCK_TYPE_NUMBER:
         {
-            handle = stdin;
-        }
-        else if (compare_numbers(f, &out) == 0)
-        {
-            handle = stdout;
-        }
-        else if (compare_numbers(f, &err) == 0)
-        {
-            handle = stderr;
-        }
-    }
-    else if (file->type == LNGRD_BLOCK_TYPE_STRING)
-    {
-        lngrd_String *f;
-        char *cstring;
+            lngrd_Number *f;
+            lngrd_Number in, out, err;
 
-        f = (lngrd_String *) file->data;
+            f = (lngrd_Number *) file->data;
+            in.value = 0;
+            in.layout = LNGRD_NUMBER_LAYOUT_32_0;
+            out.value = 1;
+            out.layout = LNGRD_NUMBER_LAYOUT_32_0;
+            err.value = 2;
+            err.layout = LNGRD_NUMBER_LAYOUT_32_0;
 
-        cstring = string_to_cstring(f);
-        handle = fopen(cstring, "wb");
-        free(cstring);
-        closable = 1;
+            if (compare_numbers(f, &in) == 0)
+            {
+                handle = stdin;
+            }
+            else if (compare_numbers(f, &out) == 0)
+            {
+                handle = stdout;
+            }
+            else if (compare_numbers(f, &err) == 0)
+            {
+                handle = stderr;
+            }
+
+            break;
+        }
+
+        case LNGRD_BLOCK_TYPE_STRING:
+        {
+            lngrd_String *f;
+            char *cstring;
+
+            f = (lngrd_String *) file->data;
+
+            cstring = string_to_cstring(f);
+            handle = fopen(cstring, "wb");
+            free(cstring);
+            closable = 1;
+
+            break;
+        }
+
+        default:
+            break;
     }
 
     if (!handle)
