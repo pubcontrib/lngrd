@@ -151,7 +151,14 @@ static void run_file(const char *file)
     {
         size_t read;
 
-        bytes = (char *) allocate(length, sizeof(char));
+        bytes = (char *) malloc(length * sizeof(char));
+
+        if (!bytes)
+        {
+            fprintf(stderr, "memory allocation failed\n");
+            exit(1);
+        }
+
         read = fread(bytes, 1, length, handle);
 
         if (ferror(handle) || read != length)
