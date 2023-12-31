@@ -26,6 +26,10 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -5278,6 +5282,10 @@ static void crash_with_message(const char *message)
     exit(1);
 }
 
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif
