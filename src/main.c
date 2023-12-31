@@ -197,6 +197,12 @@ static void run_text(const lngrd_String *code)
     pyre.capacity = 8;
     pyre.items = (lngrd_Block **) malloc(pyre.capacity * sizeof(lngrd_Block *));
 
+    if (!pyre.items)
+    {
+        fprintf(stderr, "memory allocation failed\n");
+        exit(1);
+    }
+
     lngrd_start_executer(&executer, &pyre);
     lngrd_start_lexer(&lexer, code);
     lngrd_start_parser(&parser, &lexer, &pyre);
