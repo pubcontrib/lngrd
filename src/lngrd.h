@@ -44,7 +44,7 @@ extern "C" {
  */
 
 /*semantic version of the library API and implementation*/
-#define LNGRD_VERSION "v0.12.0"
+#define LNGRD_VERSION "v0.12.1"
 
 #define LNGRD_INT_LIMIT 2147483647L
 #define LNGRD_SIZE_LIMIT ((size_t) -1)
