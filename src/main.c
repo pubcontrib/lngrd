@@ -1,4 +1,5 @@
 #define LNGRD_IMPLEMENTATION
+#define LNGRD_API static
 #include "lngrd.h"
 #include <stdio.h>
 #include <stdlib.h>

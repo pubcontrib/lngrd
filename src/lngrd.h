@@ -40,7 +40,7 @@ extern "C" {
 #endif
 
 /*
- * PUBLIC API
+ * API
  */
 
 /*semantic version of the library API and implementation*/
@@ -353,116 +353,218 @@ LNGRD_API void lngrd_start_executer(lngrd_Executer *executer, lngrd_List *pyre);
 LNGRD_API void lngrd_progress_executer(lngrd_Executer *executer, lngrd_Parser *parser);
 /*cleans up resources owned by an executer*/
 LNGRD_API void lngrd_stop_executer(lngrd_Executer *executer);
+/**/
+LNGRD_API void lngrd_read_whitespace_token(lngrd_Lexer *lexer);
+/**/
+LNGRD_API void lngrd_read_comment_token(lngrd_Lexer *lexer);
+/**/
+LNGRD_API void lngrd_read_number_token(lngrd_Lexer *lexer);
+/**/
+LNGRD_API void lngrd_read_string_token(lngrd_Lexer *lexer);
+/**/
+LNGRD_API void lngrd_read_identifiable_token(lngrd_Lexer *lexer);
+/**/
+LNGRD_API void lngrd_read_keyword_token(lngrd_Lexer *lexer);
+/**/
+LNGRD_API int lngrd_has_another_symbol(const lngrd_Lexer *lexer);
+/**/
+LNGRD_API char lngrd_read_next_symbol(lngrd_Lexer *lexer);
+/**/
+LNGRD_API char lngrd_peek_next_symbol(const lngrd_Lexer *lexer);
+/**/
+LNGRD_API int lngrd_is_whitespace_symbol(char symbol);
+/**/
+LNGRD_API int lngrd_is_number_symbol(char symbol);
+/**/
+LNGRD_API int lngrd_is_string_symbol(char symbol);
+/**/
+LNGRD_API int lngrd_is_scope_symbol(char symbol);
+/**/
+LNGRD_API int lngrd_is_letter_symbol(char symbol);
+/**/
+LNGRD_API int lngrd_is_shorthand_symbol(char symbol);
+/**/
+LNGRD_API int lngrd_is_keyword_symbol(char symbol);
+/**/
+LNGRD_API int lngrd_parse_identifier(const lngrd_String *string, lngrd_String **result);
+/**/
+LNGRD_API int lngrd_unescape_string(const lngrd_String *string, lngrd_String **result);
+/**/
+LNGRD_API int lngrd_escape_string(const lngrd_String *string, lngrd_String **result);
+/**/
+LNGRD_API void lngrd_do_add_work(lngrd_Executer *executer);
+/**/
+LNGRD_API void lngrd_do_subtract_work(lngrd_Executer *executer);
+/**/
+LNGRD_API void lngrd_do_multiply_work(lngrd_Executer *executer);
+/**/
+LNGRD_API void lngrd_do_divide_work(lngrd_Executer *executer);
+/**/
+LNGRD_API void lngrd_do_modulo_work(lngrd_Executer *executer);
+/**/
+LNGRD_API void lngrd_do_increment_work(lngrd_Executer *executer);
+/**/
+LNGRD_API void lngrd_do_decrement_work(lngrd_Executer *executer);
+/**/
+LNGRD_API void lngrd_do_and_work(lngrd_Executer *executer);
+/**/
+LNGRD_API void lngrd_do_or_work(lngrd_Executer *executer);
+/**/
+LNGRD_API void lngrd_do_not_work(lngrd_Executer *executer);
+/**/
+LNGRD_API void lngrd_do_precedes_work(lngrd_Executer *executer);
+/**/
+LNGRD_API void lngrd_do_succeeds_work(lngrd_Executer *executer);
+/**/
+LNGRD_API void lngrd_do_equals_work(lngrd_Executer *executer);
+/**/
+LNGRD_API void lngrd_do_get_work(lngrd_Executer *executer);
+/**/
+LNGRD_API void lngrd_do_set_work(lngrd_Executer *executer);
+/**/
+LNGRD_API void lngrd_do_unset_work(lngrd_Executer *executer);
+/**/
+LNGRD_API void lngrd_do_measure_work(lngrd_Executer *executer);
+/**/
+LNGRD_API void lngrd_do_slice_work(lngrd_Executer *executer);
+/**/
+LNGRD_API void lngrd_do_merge_work(lngrd_Executer *executer);
+/**/
+LNGRD_API void lngrd_do_sort_work(lngrd_Executer *executer);
+/**/
+LNGRD_API void lngrd_do_read_work(lngrd_Executer *executer);
+/**/
+LNGRD_API void lngrd_do_write_work(lngrd_Executer *executer);
+/**/
+LNGRD_API void lngrd_do_delete_work(lngrd_Executer *executer);
+/**/
+LNGRD_API void lngrd_do_query_work(lngrd_Executer *executer);
+/**/
+LNGRD_API void lngrd_do_exit_work(lngrd_Executer *executer);
+/**/
+LNGRD_API void lngrd_do_serialize_work(lngrd_Executer *executer);
+/**/
+LNGRD_API void lngrd_do_deserialize_work(lngrd_Executer *executer);
+/**/
+LNGRD_API void lngrd_do_classify_work(lngrd_Executer *executer);
+/**/
+LNGRD_API void lngrd_do_evaluate_work(lngrd_Executer *executer);
+/**/
+LNGRD_API void lngrd_set_global_function(const char *name, const char *source, void (*work)(lngrd_Executer *), lngrd_Executer *executer);
+/**/
+LNGRD_API void lngrd_set_executer_error(const char *message, lngrd_Executer *executer);
+/**/
+LNGRD_API void lngrd_set_executor_result(lngrd_Block *result, lngrd_Executer *executer);
+/**/
+LNGRD_API int lngrd_require_argument(lngrd_UInt index, lngrd_UInt types, lngrd_Executer *executer, lngrd_Block **result);
+/**/
+LNGRD_API lngrd_Block *lngrd_create_block(lngrd_BlockType type, void *data, size_t references);
+/**/
+LNGRD_API lngrd_UInt lngrd_hash_block(const lngrd_Block *block);
+/**/
+LNGRD_API lngrd_SInt lngrd_compare_blocks(const lngrd_Block *x, const lngrd_Block *y, lngrd_List *sketches, lngrd_List *doodles);
+/**/
+LNGRD_API int lngrd_is_block_truthy(const lngrd_Block *block);
+/**/
+LNGRD_API void lngrd_burn_pyre(lngrd_List *pyre);
+/**/
+LNGRD_API lngrd_Number *lngrd_create_number(lngrd_NumberLayout layout, lngrd_SInt value);
+/**/
+LNGRD_API int lngrd_string_to_number(const lngrd_String *string, lngrd_Number **result);
+/**/
+LNGRD_API int lngrd_number_to_string(const lngrd_Number *number, lngrd_String **result);
+/**/
+LNGRD_API lngrd_SInt lngrd_compare_numbers(const lngrd_Number *left, const lngrd_Number *right);
+/**/
+LNGRD_API lngrd_UInt lngrd_hash_number(const lngrd_Number *number);
+/**/
+LNGRD_API void lngrd_destroy_number(lngrd_Number *number);
+/**/
+LNGRD_API lngrd_String *lngrd_create_string(char *bytes, size_t length);
+/**/
+LNGRD_API lngrd_String *lngrd_cstring_to_string(const char *cstring);
+/**/
+LNGRD_API lngrd_String *lngrd_bytes_to_string(const char *bytes, size_t length);
+/**/
+LNGRD_API char *lngrd_string_to_cstring(const lngrd_String *string);
+/**/
+LNGRD_API lngrd_SInt lngrd_compare_strings(const lngrd_String *left, const lngrd_String *right);
+/**/
+LNGRD_API lngrd_UInt lngrd_hash_string(const lngrd_String *string);
+/**/
+LNGRD_API int lngrd_is_keyword_match(const lngrd_String *string, const char *keyword);
+/**/
+LNGRD_API void lngrd_destroy_string(lngrd_String *string);
+/**/
+LNGRD_API lngrd_List *lngrd_create_list(void);
+/**/
+LNGRD_API void lngrd_push_list_item(lngrd_List *list, lngrd_Block *item);
+/**/
+LNGRD_API lngrd_Block *lngrd_pop_list_item(lngrd_List *list);
+/**/
+LNGRD_API lngrd_Block *lngrd_peek_list_item(lngrd_List *list);
+/**/
+LNGRD_API lngrd_List *lngrd_copy_list(lngrd_List *list);
+/**/
+LNGRD_API void lngrd_sort_list(lngrd_List *list, lngrd_List *sketches, lngrd_List *doodles);
+/**/
+LNGRD_API void lngrd_burn_list(lngrd_List *list, lngrd_List *pyre);
+/**/
+LNGRD_API lngrd_Map *lngrd_create_map(void);
+/**/
+LNGRD_API lngrd_Block *lngrd_get_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_List *sketches, lngrd_List *doodles);
+/**/
+LNGRD_API void lngrd_set_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_Block *block, lngrd_List *pyre, lngrd_List *sketches, lngrd_List *doodles);
+/**/
+LNGRD_API void lngrd_unset_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_List *pyre, lngrd_List *sketches, lngrd_List *doodles);
+/**/
+LNGRD_API void lngrd_burn_map(lngrd_Map *map, lngrd_List *pyre);
+/**/
+LNGRD_API lngrd_Function *lngrd_create_function(void);
+/**/
+LNGRD_API lngrd_SInt lngrd_compare_functions(const lngrd_Function *left, const lngrd_Function *right);
+/**/
+LNGRD_API void lngrd_burn_function(lngrd_Function *function, lngrd_List *pyre);
+/**/
+LNGRD_API lngrd_Expression *lngrd_create_expression(lngrd_ExpressionType type, void *form);
+/**/
+LNGRD_API void lngrd_burn_expression(lngrd_Expression *expression, lngrd_List *pyre);
+/**/
+LNGRD_API lngrd_Plan *lngrd_create_plan(void);
+/**/
+LNGRD_API void lngrd_push_plan_action(lngrd_Plan *plan, lngrd_Action action);
+/**/
+LNGRD_API lngrd_Action lngrd_pop_plan_action(lngrd_Plan *plan);
+/**/
+LNGRD_API lngrd_Action lngrd_peek_plan_action(lngrd_Plan *plan);
+/**/
+LNGRD_API void lngrd_destroy_plan(lngrd_Plan *plan);
+/**/
+LNGRD_API lngrd_Action lngrd_prepare_simple_action(lngrd_Block *single, lngrd_UInt checkpoint, lngrd_UInt capacity);
+/**/
+LNGRD_API lngrd_Action lngrd_prepare_general_action(lngrd_List *expressions, lngrd_UInt ownership, lngrd_UInt checkpoint, lngrd_UInt capacity);
+/**/
+LNGRD_API void lngrd_start_buffer(lngrd_Buffer *buffer);
+/**/
+LNGRD_API int lngrd_append_buffer_bytes(lngrd_Buffer *buffer, const lngrd_String *string);
+/**/
+LNGRD_API lngrd_String *lngrd_buffer_to_string(lngrd_Buffer *buffer);
+/**/
+LNGRD_API void lngrd_abandon_buffer(lngrd_Buffer *buffer);
+/**/
+LNGRD_API int lngrd_can_fit_both(size_t left, size_t right);
+/**/
+LNGRD_API void *lngrd_allocate(size_t number, size_t size);
+/**/
+LNGRD_API void *lngrd_reallocate(void *memory, size_t number, size_t size);
+/**/
+LNGRD_API void lngrd_crash_with_message(const char *message);
 
 #ifdef LNGRD_IMPLEMENTATION
 
 /*
  * IMPLEMENTATION
  */
-
-static void lngrd_read_whitespace_token(lngrd_Lexer *lexer);
-static void lngrd_read_comment_token(lngrd_Lexer *lexer);
-static void lngrd_read_number_token(lngrd_Lexer *lexer);
-static void lngrd_read_string_token(lngrd_Lexer *lexer);
-static void lngrd_read_identifiable_token(lngrd_Lexer *lexer);
-static void lngrd_read_keyword_token(lngrd_Lexer *lexer);
-static int lngrd_has_another_symbol(const lngrd_Lexer *lexer);
-static char lngrd_read_next_symbol(lngrd_Lexer *lexer);
-static char lngrd_peek_next_symbol(const lngrd_Lexer *lexer);
-static int lngrd_is_whitespace_symbol(char symbol);
-static int lngrd_is_number_symbol(char symbol);
-static int lngrd_is_string_symbol(char symbol);
-static int lngrd_is_scope_symbol(char symbol);
-static int lngrd_is_letter_symbol(char symbol);
-static int lngrd_is_shorthand_symbol(char symbol);
-static int lngrd_is_keyword_symbol(char symbol);
-static int lngrd_parse_identifier(const lngrd_String *string, lngrd_String **result);
-static int lngrd_unescape_string(const lngrd_String *string, lngrd_String **result);
-static int lngrd_escape_string(const lngrd_String *string, lngrd_String **result);
-static void lngrd_do_add_work(lngrd_Executer *executer);
-static void lngrd_do_subtract_work(lngrd_Executer *executer);
-static void lngrd_do_multiply_work(lngrd_Executer *executer);
-static void lngrd_do_divide_work(lngrd_Executer *executer);
-static void lngrd_do_modulo_work(lngrd_Executer *executer);
-static void lngrd_do_increment_work(lngrd_Executer *executer);
-static void lngrd_do_decrement_work(lngrd_Executer *executer);
-static void lngrd_do_and_work(lngrd_Executer *executer);
-static void lngrd_do_or_work(lngrd_Executer *executer);
-static void lngrd_do_not_work(lngrd_Executer *executer);
-static void lngrd_do_precedes_work(lngrd_Executer *executer);
-static void lngrd_do_succeeds_work(lngrd_Executer *executer);
-static void lngrd_do_equals_work(lngrd_Executer *executer);
-static void lngrd_do_get_work(lngrd_Executer *executer);
-static void lngrd_do_set_work(lngrd_Executer *executer);
-static void lngrd_do_unset_work(lngrd_Executer *executer);
-static void lngrd_do_measure_work(lngrd_Executer *executer);
-static void lngrd_do_slice_work(lngrd_Executer *executer);
-static void lngrd_do_merge_work(lngrd_Executer *executer);
-static void lngrd_do_sort_work(lngrd_Executer *executer);
-static void lngrd_do_read_work(lngrd_Executer *executer);
-static void lngrd_do_write_work(lngrd_Executer *executer);
-static void lngrd_do_delete_work(lngrd_Executer *executer);
-static void lngrd_do_query_work(lngrd_Executer *executer);
-static void lngrd_do_exit_work(lngrd_Executer *executer);
-static void lngrd_do_serialize_work(lngrd_Executer *executer);
-static void lngrd_do_deserialize_work(lngrd_Executer *executer);
-static void lngrd_do_classify_work(lngrd_Executer *executer);
-static void lngrd_do_evaluate_work(lngrd_Executer *executer);
-static void lngrd_set_global_function(const char *name, const char *source, void (*work)(lngrd_Executer *), lngrd_Executer *executer);
-static void lngrd_set_executer_error(const char *message, lngrd_Executer *executer);
-static void lngrd_set_executor_result(lngrd_Block *result, lngrd_Executer *executer);
-static int lngrd_require_argument(lngrd_UInt index, lngrd_UInt types, lngrd_Executer *executer, lngrd_Block **result);
-static lngrd_Block *lngrd_create_block(lngrd_BlockType type, void *data, size_t references);
-static lngrd_UInt lngrd_hash_block(const lngrd_Block *block);
-static lngrd_SInt lngrd_compare_blocks(const lngrd_Block *x, const lngrd_Block *y, lngrd_List *sketches, lngrd_List *doodles);
-static int lngrd_is_block_truthy(const lngrd_Block *block);
-static void lngrd_burn_pyre(lngrd_List *pyre);
-static lngrd_Number *lngrd_create_number(lngrd_NumberLayout layout, lngrd_SInt value);
-static int lngrd_string_to_number(const lngrd_String *string, lngrd_Number **result);
-static int lngrd_number_to_string(const lngrd_Number *number, lngrd_String **result);
-static lngrd_SInt lngrd_compare_numbers(const lngrd_Number *left, const lngrd_Number *right);
-static lngrd_UInt lngrd_hash_number(const lngrd_Number *number);
-static void lngrd_destroy_number(lngrd_Number *number);
-static lngrd_String *lngrd_create_string(char *bytes, size_t length);
-static lngrd_String *lngrd_cstring_to_string(const char *cstring);
-static lngrd_String *lngrd_bytes_to_string(const char *bytes, size_t length);
-static char *lngrd_string_to_cstring(const lngrd_String *string);
-static lngrd_SInt lngrd_compare_strings(const lngrd_String *left, const lngrd_String *right);
-static lngrd_UInt lngrd_hash_string(const lngrd_String *string);
-static int lngrd_is_keyword_match(const lngrd_String *string, const char *keyword);
-static void lngrd_destroy_string(lngrd_String *string);
-static lngrd_List *lngrd_create_list(void);
-static void lngrd_push_list_item(lngrd_List *list, lngrd_Block *item);
-static lngrd_Block *lngrd_pop_list_item(lngrd_List *list);
-static lngrd_Block *lngrd_peek_list_item(lngrd_List *list);
-static lngrd_List *lngrd_copy_list(lngrd_List *list);
-static void lngrd_sort_list(lngrd_List *list, lngrd_List *sketches, lngrd_List *doodles);
-static void lngrd_burn_list(lngrd_List *list, lngrd_List *pyre);
-static lngrd_Map *lngrd_create_map(void);
-static lngrd_Block *lngrd_get_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_List *sketches, lngrd_List *doodles);
-static void lngrd_set_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_Block *block, lngrd_List *pyre, lngrd_List *sketches, lngrd_List *doodles);
-static void lngrd_unset_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_List *pyre, lngrd_List *sketches, lngrd_List *doodles);
-static void lngrd_burn_map(lngrd_Map *map, lngrd_List *pyre);
-static lngrd_Function *lngrd_create_function(void);
-static lngrd_SInt lngrd_compare_functions(const lngrd_Function *left, const lngrd_Function *right);
-static void lngrd_burn_function(lngrd_Function *function, lngrd_List *pyre);
-static lngrd_Expression *lngrd_create_expression(lngrd_ExpressionType type, void *form);
-static void lngrd_burn_expression(lngrd_Expression *expression, lngrd_List *pyre);
-static lngrd_Plan *lngrd_create_plan(void);
-static void lngrd_push_plan_action(lngrd_Plan *plan, lngrd_Action action);
-static lngrd_Action lngrd_pop_plan_action(lngrd_Plan *plan);
-static lngrd_Action lngrd_peek_plan_action(lngrd_Plan *plan);
-static void lngrd_destroy_plan(lngrd_Plan *plan);
-static lngrd_Action lngrd_prepare_simple_action(lngrd_Block *single, lngrd_UInt checkpoint, lngrd_UInt capacity);
-static lngrd_Action lngrd_prepare_general_action(lngrd_List *expressions, lngrd_UInt ownership, lngrd_UInt checkpoint, lngrd_UInt capacity);
-static void lngrd_start_buffer(lngrd_Buffer *buffer);
-static int lngrd_append_buffer_bytes(lngrd_Buffer *buffer, const lngrd_String *string);
-static lngrd_String *lngrd_buffer_to_string(lngrd_Buffer *buffer);
-static void lngrd_abandon_buffer(lngrd_Buffer *buffer);
-static int lngrd_can_fit_both(size_t left, size_t right);
-static void *lngrd_allocate(size_t number, size_t size);
-static void *lngrd_reallocate(void *memory, size_t number, size_t size);
-static void lngrd_crash_with_message(const char *message);
 
 LNGRD_API int lngrd_check_support(void)
 {
@@ -1800,7 +1902,7 @@ LNGRD_API void lngrd_stop_executer(lngrd_Executer *executer)
     lngrd_burn_pyre(executer->pyre);
 }
 
-static void lngrd_read_whitespace_token(lngrd_Lexer *lexer)
+LNGRD_API void lngrd_read_whitespace_token(lngrd_Lexer *lexer)
 {
     lexer->token.type = LNGRD_TOKEN_TYPE_WHITESPACE;
 
@@ -1821,7 +1923,7 @@ static void lngrd_read_whitespace_token(lngrd_Lexer *lexer)
     }
 }
 
-static void lngrd_read_comment_token(lngrd_Lexer *lexer)
+LNGRD_API void lngrd_read_comment_token(lngrd_Lexer *lexer)
 {
     lexer->token.type = LNGRD_TOKEN_TYPE_COMMENT;
 
@@ -1842,7 +1944,7 @@ static void lngrd_read_comment_token(lngrd_Lexer *lexer)
     }
 }
 
-static void lngrd_read_number_token(lngrd_Lexer *lexer)
+LNGRD_API void lngrd_read_number_token(lngrd_Lexer *lexer)
 {
     lexer->token.type = LNGRD_TOKEN_TYPE_NUMBER;
 
@@ -1863,7 +1965,7 @@ static void lngrd_read_number_token(lngrd_Lexer *lexer)
     }
 }
 
-static void lngrd_read_string_token(lngrd_Lexer *lexer)
+LNGRD_API void lngrd_read_string_token(lngrd_Lexer *lexer)
 {
     int escaping, completed;
 
@@ -1918,7 +2020,7 @@ static void lngrd_read_string_token(lngrd_Lexer *lexer)
     }
 }
 
-static void lngrd_read_identifiable_token(lngrd_Lexer *lexer)
+LNGRD_API void lngrd_read_identifiable_token(lngrd_Lexer *lexer)
 {
     char symbol;
 
@@ -1961,7 +2063,7 @@ static void lngrd_read_identifiable_token(lngrd_Lexer *lexer)
     }
 }
 
-static void lngrd_read_keyword_token(lngrd_Lexer *lexer)
+LNGRD_API void lngrd_read_keyword_token(lngrd_Lexer *lexer)
 {
     static const char *keywords[] = {"if", "else", "while", "catch", "throw", "argument", NULL};
     const char **keyword;
@@ -2005,59 +2107,59 @@ static void lngrd_read_keyword_token(lngrd_Lexer *lexer)
     lexer->errored = 1;
 }
 
-static int lngrd_has_another_symbol(const lngrd_Lexer *lexer)
+LNGRD_API int lngrd_has_another_symbol(const lngrd_Lexer *lexer)
 {
     return lexer->token.end < lexer->code->length;
 }
 
-static char lngrd_read_next_symbol(lngrd_Lexer *lexer)
+LNGRD_API char lngrd_read_next_symbol(lngrd_Lexer *lexer)
 {
     return lexer->code->bytes[lexer->token.end++];
 }
 
-static char lngrd_peek_next_symbol(const lngrd_Lexer *lexer)
+LNGRD_API char lngrd_peek_next_symbol(const lngrd_Lexer *lexer)
 {
     return lexer->code->bytes[lexer->token.end];
 }
 
-static int lngrd_is_whitespace_symbol(char symbol)
+LNGRD_API int lngrd_is_whitespace_symbol(char symbol)
 {
     return symbol == ' ' || symbol == '\t' || symbol == '\n' || symbol == '\r';
 }
 
-static int lngrd_is_number_symbol(char symbol)
+LNGRD_API int lngrd_is_number_symbol(char symbol)
 {
     return symbol >= '0' && symbol <= '9';
 }
 
-static int lngrd_is_string_symbol(char symbol)
+LNGRD_API int lngrd_is_string_symbol(char symbol)
 {
     return symbol >= ' ' && symbol <= '~';
 }
 
-static int lngrd_is_scope_symbol(char symbol)
+LNGRD_API int lngrd_is_scope_symbol(char symbol)
 {
     return symbol == '$' || symbol == '@';
 }
 
-static int lngrd_is_letter_symbol(char symbol)
+LNGRD_API int lngrd_is_letter_symbol(char symbol)
 {
     return symbol >= 'A' && symbol <= 'z';
 }
 
-static int lngrd_is_shorthand_symbol(char symbol)
+LNGRD_API int lngrd_is_shorthand_symbol(char symbol)
 {
     return lngrd_is_letter_symbol(symbol)
         || lngrd_is_number_symbol(symbol)
         || symbol == '_';
 }
 
-static int lngrd_is_keyword_symbol(char symbol)
+LNGRD_API int lngrd_is_keyword_symbol(char symbol)
 {
     return symbol >= 'a' && symbol <= 'z';
 }
 
-static int lngrd_parse_identifier(const lngrd_String *string, lngrd_String **result)
+LNGRD_API int lngrd_parse_identifier(const lngrd_String *string, lngrd_String **result)
 {
     lngrd_String view;
 
@@ -2075,7 +2177,7 @@ static int lngrd_parse_identifier(const lngrd_String *string, lngrd_String **res
     return lngrd_unescape_string(&view, result);
 }
 
-static int lngrd_unescape_string(const lngrd_String *string, lngrd_String **result)
+LNGRD_API int lngrd_unescape_string(const lngrd_String *string, lngrd_String **result)
 {
     char *bytes;
     size_t index, length;
@@ -2305,7 +2407,7 @@ static int lngrd_unescape_string(const lngrd_String *string, lngrd_String **resu
     return 1;
 }
 
-static int lngrd_escape_string(const lngrd_String *string, lngrd_String **result)
+LNGRD_API int lngrd_escape_string(const lngrd_String *string, lngrd_String **result)
 {
     char *bytes;
     size_t index, length, escapes;
@@ -2565,7 +2667,7 @@ static int lngrd_escape_string(const lngrd_String *string, lngrd_String **result
     return 1;
 }
 
-static void lngrd_do_add_work(lngrd_Executer *executer)
+LNGRD_API void lngrd_do_add_work(lngrd_Executer *executer)
 {
     lngrd_Block *left, *right;
     lngrd_Number *l, *r;
@@ -2589,7 +2691,7 @@ static void lngrd_do_add_work(lngrd_Executer *executer)
     lngrd_set_executor_result(lngrd_create_block(LNGRD_BLOCK_TYPE_NUMBER, lngrd_create_number(LNGRD_NUMBER_LAYOUT_32_0, l->value + r->value), 0), executer);
 }
 
-static void lngrd_do_subtract_work(lngrd_Executer *executer)
+LNGRD_API void lngrd_do_subtract_work(lngrd_Executer *executer)
 {
     lngrd_Block *left, *right;
     lngrd_Number *l, *r;
@@ -2613,7 +2715,7 @@ static void lngrd_do_subtract_work(lngrd_Executer *executer)
     lngrd_set_executor_result(lngrd_create_block(LNGRD_BLOCK_TYPE_NUMBER, lngrd_create_number(LNGRD_NUMBER_LAYOUT_32_0, l->value - r->value), 0), executer);
 }
 
-static void lngrd_do_multiply_work(lngrd_Executer *executer)
+LNGRD_API void lngrd_do_multiply_work(lngrd_Executer *executer)
 {
     lngrd_Block *left, *right;
     lngrd_Number *l, *r;
@@ -2639,7 +2741,7 @@ static void lngrd_do_multiply_work(lngrd_Executer *executer)
     lngrd_set_executor_result(lngrd_create_block(LNGRD_BLOCK_TYPE_NUMBER, lngrd_create_number(LNGRD_NUMBER_LAYOUT_32_0, l->value * r->value), 0), executer);
 }
 
-static void lngrd_do_divide_work(lngrd_Executer *executer)
+LNGRD_API void lngrd_do_divide_work(lngrd_Executer *executer)
 {
     lngrd_Block *left, *right;
     lngrd_Number *l, *r;
@@ -2662,7 +2764,7 @@ static void lngrd_do_divide_work(lngrd_Executer *executer)
     lngrd_set_executor_result(lngrd_create_block(LNGRD_BLOCK_TYPE_NUMBER, lngrd_create_number(LNGRD_NUMBER_LAYOUT_32_0, l->value / r->value), 0), executer);
 }
 
-static void lngrd_do_modulo_work(lngrd_Executer *executer)
+LNGRD_API void lngrd_do_modulo_work(lngrd_Executer *executer)
 {
     lngrd_Block *left, *right;
     lngrd_Number *l, *r;
@@ -2685,7 +2787,7 @@ static void lngrd_do_modulo_work(lngrd_Executer *executer)
     lngrd_set_executor_result(lngrd_create_block(LNGRD_BLOCK_TYPE_NUMBER, lngrd_create_number(LNGRD_NUMBER_LAYOUT_32_0, l->value % r->value), 0), executer);
 }
 
-static void lngrd_do_increment_work(lngrd_Executer *executer)
+LNGRD_API void lngrd_do_increment_work(lngrd_Executer *executer)
 {
     lngrd_Block *value;
     lngrd_Number *v;
@@ -2706,7 +2808,7 @@ static void lngrd_do_increment_work(lngrd_Executer *executer)
     lngrd_set_executor_result(lngrd_create_block(LNGRD_BLOCK_TYPE_NUMBER, lngrd_create_number(LNGRD_NUMBER_LAYOUT_32_0, v->value + 1), 0), executer);
 }
 
-static void lngrd_do_decrement_work(lngrd_Executer *executer)
+LNGRD_API void lngrd_do_decrement_work(lngrd_Executer *executer)
 {
     lngrd_Block *value;
     lngrd_Number *v;
@@ -2727,7 +2829,7 @@ static void lngrd_do_decrement_work(lngrd_Executer *executer)
     lngrd_set_executor_result(lngrd_create_block(LNGRD_BLOCK_TYPE_NUMBER, lngrd_create_number(LNGRD_NUMBER_LAYOUT_32_0, v->value - 1), 0), executer);
 }
 
-static void lngrd_do_and_work(lngrd_Executer *executer)
+LNGRD_API void lngrd_do_and_work(lngrd_Executer *executer)
 {
     lngrd_Block *left, *right;
 
@@ -2740,7 +2842,7 @@ static void lngrd_do_and_work(lngrd_Executer *executer)
     lngrd_set_executor_result(lngrd_create_block(LNGRD_BLOCK_TYPE_NUMBER, lngrd_create_number(LNGRD_NUMBER_LAYOUT_32_0, lngrd_is_block_truthy(left) && lngrd_is_block_truthy(right)), 0), executer);
 }
 
-static void lngrd_do_or_work(lngrd_Executer *executer)
+LNGRD_API void lngrd_do_or_work(lngrd_Executer *executer)
 {
     lngrd_Block *left, *right;
 
@@ -2753,7 +2855,7 @@ static void lngrd_do_or_work(lngrd_Executer *executer)
     lngrd_set_executor_result(lngrd_create_block(LNGRD_BLOCK_TYPE_NUMBER, lngrd_create_number(LNGRD_NUMBER_LAYOUT_32_0, lngrd_is_block_truthy(left) || lngrd_is_block_truthy(right)), 0), executer);
 }
 
-static void lngrd_do_not_work(lngrd_Executer *executer)
+LNGRD_API void lngrd_do_not_work(lngrd_Executer *executer)
 {
     lngrd_Block *value;
 
@@ -2765,7 +2867,7 @@ static void lngrd_do_not_work(lngrd_Executer *executer)
     lngrd_set_executor_result(lngrd_create_block(LNGRD_BLOCK_TYPE_NUMBER, lngrd_create_number(LNGRD_NUMBER_LAYOUT_32_0, !lngrd_is_block_truthy(value)), 0), executer);
 }
 
-static void lngrd_do_precedes_work(lngrd_Executer *executer)
+LNGRD_API void lngrd_do_precedes_work(lngrd_Executer *executer)
 {
     lngrd_Block *left, *right;
 
@@ -2778,7 +2880,7 @@ static void lngrd_do_precedes_work(lngrd_Executer *executer)
     lngrd_set_executor_result(lngrd_create_block(LNGRD_BLOCK_TYPE_NUMBER, lngrd_create_number(LNGRD_NUMBER_LAYOUT_32_0, lngrd_compare_blocks(left, right, executer->sketches, executer->doodles) < 0), 0), executer);
 }
 
-static void lngrd_do_succeeds_work(lngrd_Executer *executer)
+LNGRD_API void lngrd_do_succeeds_work(lngrd_Executer *executer)
 {
     lngrd_Block *left, *right;
 
@@ -2791,7 +2893,7 @@ static void lngrd_do_succeeds_work(lngrd_Executer *executer)
     lngrd_set_executor_result(lngrd_create_block(LNGRD_BLOCK_TYPE_NUMBER, lngrd_create_number(LNGRD_NUMBER_LAYOUT_32_0, lngrd_compare_blocks(left, right, executer->sketches, executer->doodles) > 0), 0), executer);
 }
 
-static void lngrd_do_equals_work(lngrd_Executer *executer)
+LNGRD_API void lngrd_do_equals_work(lngrd_Executer *executer)
 {
     lngrd_Block *left, *right;
 
@@ -2804,7 +2906,7 @@ static void lngrd_do_equals_work(lngrd_Executer *executer)
     lngrd_set_executor_result(lngrd_create_block(LNGRD_BLOCK_TYPE_NUMBER, lngrd_create_number(LNGRD_NUMBER_LAYOUT_32_0, lngrd_compare_blocks(left, right, executer->sketches, executer->doodles) == 0), 0), executer);
 }
 
-static void lngrd_do_get_work(lngrd_Executer *executer)
+LNGRD_API void lngrd_do_get_work(lngrd_Executer *executer)
 {
     lngrd_Block *collection, *key;
 
@@ -2877,7 +2979,7 @@ static void lngrd_do_get_work(lngrd_Executer *executer)
     }
 }
 
-static void lngrd_do_set_work(lngrd_Executer *executer)
+LNGRD_API void lngrd_do_set_work(lngrd_Executer *executer)
 {
     lngrd_Block *collection, *key, *item;
 
@@ -3011,7 +3113,7 @@ static void lngrd_do_set_work(lngrd_Executer *executer)
     }
 }
 
-static void lngrd_do_unset_work(lngrd_Executer *executer)
+LNGRD_API void lngrd_do_unset_work(lngrd_Executer *executer)
 {
     lngrd_Block *collection, *key;
 
@@ -3109,7 +3211,7 @@ static void lngrd_do_unset_work(lngrd_Executer *executer)
     }
 }
 
-static void lngrd_do_measure_work(lngrd_Executer *executer)
+LNGRD_API void lngrd_do_measure_work(lngrd_Executer *executer)
 {
     lngrd_Block *value;
     size_t length;
@@ -3138,7 +3240,7 @@ static void lngrd_do_measure_work(lngrd_Executer *executer)
     lngrd_set_executor_result(lngrd_create_block(LNGRD_BLOCK_TYPE_NUMBER, lngrd_create_number(LNGRD_NUMBER_LAYOUT_32_0, (lngrd_SInt) length), 0), executer);
 }
 
-static void lngrd_do_slice_work(lngrd_Executer *executer)
+LNGRD_API void lngrd_do_slice_work(lngrd_Executer *executer)
 {
     lngrd_Block *value, *start, *end;
     lngrd_Number *s, *e;
@@ -3237,7 +3339,7 @@ static void lngrd_do_slice_work(lngrd_Executer *executer)
     }
 }
 
-static void lngrd_do_merge_work(lngrd_Executer *executer)
+LNGRD_API void lngrd_do_merge_work(lngrd_Executer *executer)
 {
     lngrd_Block *left, *right;
 
@@ -3348,7 +3450,7 @@ static void lngrd_do_merge_work(lngrd_Executer *executer)
     }
 }
 
-static void lngrd_do_sort_work(lngrd_Executer *executer)
+LNGRD_API void lngrd_do_sort_work(lngrd_Executer *executer)
 {
     lngrd_Block *list;
     lngrd_List *sorted;
@@ -3364,7 +3466,7 @@ static void lngrd_do_sort_work(lngrd_Executer *executer)
     lngrd_set_executor_result(lngrd_create_block(LNGRD_BLOCK_TYPE_LIST, sorted, 0), executer);
 }
 
-static void lngrd_do_read_work(lngrd_Executer *executer)
+LNGRD_API void lngrd_do_read_work(lngrd_Executer *executer)
 {
     lngrd_Block *file, *until;
     lngrd_String *u;
@@ -3503,7 +3605,7 @@ static void lngrd_do_read_work(lngrd_Executer *executer)
     lngrd_set_executor_result(lngrd_create_block(LNGRD_BLOCK_TYPE_STRING, lngrd_buffer_to_string(&buffer), 0), executer);
 }
 
-static void lngrd_do_write_work(lngrd_Executer *executer)
+LNGRD_API void lngrd_do_write_work(lngrd_Executer *executer)
 {
     lngrd_Block *file, *text;
     lngrd_String *t;
@@ -3601,7 +3703,7 @@ static void lngrd_do_write_work(lngrd_Executer *executer)
     lngrd_set_executor_result(lngrd_create_block(LNGRD_BLOCK_TYPE_STRING, lngrd_cstring_to_string(""), 0), executer);
 }
 
-static void lngrd_do_delete_work(lngrd_Executer *executer)
+LNGRD_API void lngrd_do_delete_work(lngrd_Executer *executer)
 {
     lngrd_Block *file;
     char *cstring;
@@ -3641,7 +3743,7 @@ static void lngrd_do_delete_work(lngrd_Executer *executer)
     lngrd_set_executor_result(lngrd_create_block(LNGRD_BLOCK_TYPE_STRING, lngrd_cstring_to_string(""), 0), executer);
 }
 
-static void lngrd_do_query_work(lngrd_Executer *executer)
+LNGRD_API void lngrd_do_query_work(lngrd_Executer *executer)
 {
     lngrd_Block *variable;
     lngrd_String *v;
@@ -3667,7 +3769,7 @@ static void lngrd_do_query_work(lngrd_Executer *executer)
     lngrd_set_executor_result(lngrd_create_block(LNGRD_BLOCK_TYPE_STRING, lngrd_cstring_to_string(text), 0), executer);
 }
 
-static void lngrd_do_exit_work(lngrd_Executer *executer)
+LNGRD_API void lngrd_do_exit_work(lngrd_Executer *executer)
 {
     lngrd_Block *code;
     lngrd_Number *c;
@@ -3696,7 +3798,7 @@ static void lngrd_do_exit_work(lngrd_Executer *executer)
     lngrd_set_executor_result(lngrd_create_block(LNGRD_BLOCK_TYPE_STRING, lngrd_cstring_to_string(""), 0), executer);
 }
 
-static void lngrd_do_serialize_work(lngrd_Executer *executer)
+LNGRD_API void lngrd_do_serialize_work(lngrd_Executer *executer)
 {
     lngrd_Block *value;
     lngrd_Buffer buffer;
@@ -3847,7 +3949,7 @@ static void lngrd_do_serialize_work(lngrd_Executer *executer)
     lngrd_set_executor_result(lngrd_create_block(LNGRD_BLOCK_TYPE_STRING, lngrd_buffer_to_string(&buffer), 0), executer);
 }
 
-static void lngrd_do_deserialize_work(lngrd_Executer *executer)
+LNGRD_API void lngrd_do_deserialize_work(lngrd_Executer *executer)
 {
     lngrd_Block *code, *value;
     lngrd_String *c;
@@ -3892,7 +3994,7 @@ static void lngrd_do_deserialize_work(lngrd_Executer *executer)
     lngrd_set_executor_result(value, executer);
 }
 
-static void lngrd_do_classify_work(lngrd_Executer *executer)
+LNGRD_API void lngrd_do_classify_work(lngrd_Executer *executer)
 {
     lngrd_Block *value;
     char *type;
@@ -3933,7 +4035,7 @@ static void lngrd_do_classify_work(lngrd_Executer *executer)
     lngrd_set_executor_result(lngrd_create_block(LNGRD_BLOCK_TYPE_STRING, lngrd_cstring_to_string(type), 0), executer);
 }
 
-static void lngrd_do_evaluate_work(lngrd_Executer *executer)
+LNGRD_API void lngrd_do_evaluate_work(lngrd_Executer *executer)
 {
     lngrd_Block *code;
     lngrd_String *c;
@@ -3994,7 +4096,7 @@ static void lngrd_do_evaluate_work(lngrd_Executer *executer)
     lngrd_set_executor_result(lngrd_create_block(LNGRD_BLOCK_TYPE_STRING, lngrd_cstring_to_string(""), 0), executer);
 }
 
-static void lngrd_set_global_function(const char *name, const char *source, void (*work)(lngrd_Executer *), lngrd_Executer *executer)
+LNGRD_API void lngrd_set_global_function(const char *name, const char *source, void (*work)(lngrd_Executer *), lngrd_Executer *executer)
 {
     lngrd_NativeForm *form;
     lngrd_Block *key, *value;
@@ -4013,7 +4115,7 @@ static void lngrd_set_global_function(const char *name, const char *source, void
     lngrd_set_map_item(executer->globals, key, value, executer->pyre, executer->sketches, executer->doodles);
 }
 
-static void lngrd_set_executer_error(const char *message, lngrd_Executer *executer)
+LNGRD_API void lngrd_set_executer_error(const char *message, lngrd_Executer *executer)
 {
     lngrd_Block *error;
     lngrd_String *data;
@@ -4024,7 +4126,7 @@ static void lngrd_set_executer_error(const char *message, lngrd_Executer *execut
     executer->errored = 1;
 }
 
-static void lngrd_set_executor_result(lngrd_Block *result, lngrd_Executer *executer)
+LNGRD_API void lngrd_set_executor_result(lngrd_Block *result, lngrd_Executer *executer)
 {
     if (executer->result)
     {
@@ -4038,7 +4140,7 @@ static void lngrd_set_executor_result(lngrd_Block *result, lngrd_Executer *execu
     }
 }
 
-static int lngrd_require_argument(lngrd_UInt index, lngrd_UInt types, lngrd_Executer *executer, lngrd_Block **result)
+LNGRD_API int lngrd_require_argument(lngrd_UInt index, lngrd_UInt types, lngrd_Executer *executer, lngrd_Block **result)
 {
     lngrd_Block *argument;
     lngrd_UInt capacity, length;
@@ -4065,7 +4167,7 @@ static int lngrd_require_argument(lngrd_UInt index, lngrd_UInt types, lngrd_Exec
     return 1;
 }
 
-static lngrd_Block *lngrd_create_block(lngrd_BlockType type, void *data, size_t references)
+LNGRD_API lngrd_Block *lngrd_create_block(lngrd_BlockType type, void *data, size_t references)
 {
     lngrd_Block *block;
 
@@ -4077,7 +4179,7 @@ static lngrd_Block *lngrd_create_block(lngrd_BlockType type, void *data, size_t 
     return block;
 }
 
-static lngrd_UInt lngrd_hash_block(const lngrd_Block *block)
+LNGRD_API lngrd_UInt lngrd_hash_block(const lngrd_Block *block)
 {
     switch (block->type)
     {
@@ -4094,7 +4196,7 @@ static lngrd_UInt lngrd_hash_block(const lngrd_Block *block)
     return 0;
 }
 
-static lngrd_SInt lngrd_compare_blocks(const lngrd_Block *x, const lngrd_Block *y, lngrd_List *sketches, lngrd_List *doodles)
+LNGRD_API lngrd_SInt lngrd_compare_blocks(const lngrd_Block *x, const lngrd_Block *y, lngrd_List *sketches, lngrd_List *doodles)
 {
     sketches->length = 0;
     lngrd_push_list_item(sketches, (lngrd_Block *) x);
@@ -4189,7 +4291,7 @@ static lngrd_SInt lngrd_compare_blocks(const lngrd_Block *x, const lngrd_Block *
     return 0;
 }
 
-static int lngrd_is_block_truthy(const lngrd_Block *block)
+LNGRD_API int lngrd_is_block_truthy(const lngrd_Block *block)
 {
     switch (block->type)
     {
@@ -4215,7 +4317,7 @@ static int lngrd_is_block_truthy(const lngrd_Block *block)
     return 0;
 }
 
-static void lngrd_burn_pyre(lngrd_List *pyre)
+LNGRD_API void lngrd_burn_pyre(lngrd_List *pyre)
 {
     while (pyre->length > 0)
     {
@@ -4268,7 +4370,7 @@ static void lngrd_burn_pyre(lngrd_List *pyre)
     }
 }
 
-static lngrd_Number *lngrd_create_number(lngrd_NumberLayout layout, lngrd_SInt value)
+LNGRD_API lngrd_Number *lngrd_create_number(lngrd_NumberLayout layout, lngrd_SInt value)
 {
     lngrd_Number *number;
 
@@ -4279,7 +4381,7 @@ static lngrd_Number *lngrd_create_number(lngrd_NumberLayout layout, lngrd_SInt v
     return number;
 }
 
-static int lngrd_string_to_number(const lngrd_String *string, lngrd_Number **result)
+LNGRD_API int lngrd_string_to_number(const lngrd_String *string, lngrd_Number **result)
 {
     static lngrd_UInt ten_to[] = {1UL, 10UL, 100UL, 1000UL, 10000UL, 100000UL, 1000000UL, 10000000UL, 100000000UL, 1000000000UL};
     lngrd_SInt value;
@@ -4338,7 +4440,7 @@ static int lngrd_string_to_number(const lngrd_String *string, lngrd_Number **res
     return 1;
 }
 
-static int lngrd_number_to_string(const lngrd_Number *number, lngrd_String **result)
+LNGRD_API int lngrd_number_to_string(const lngrd_Number *number, lngrd_String **result)
 {
     lngrd_SInt whole;
     lngrd_String *string;
@@ -4399,7 +4501,7 @@ static int lngrd_number_to_string(const lngrd_Number *number, lngrd_String **res
     return 1;
 }
 
-static lngrd_SInt lngrd_compare_numbers(const lngrd_Number *left, const lngrd_Number *right)
+LNGRD_API lngrd_SInt lngrd_compare_numbers(const lngrd_Number *left, const lngrd_Number *right)
 {
     if (left->value < right->value)
     {
@@ -4415,17 +4517,17 @@ static lngrd_SInt lngrd_compare_numbers(const lngrd_Number *left, const lngrd_Nu
     }
 }
 
-static lngrd_UInt lngrd_hash_number(const lngrd_Number *number)
+LNGRD_API lngrd_UInt lngrd_hash_number(const lngrd_Number *number)
 {
     return (lngrd_UInt) number->value;
 }
 
-static void lngrd_destroy_number(lngrd_Number *number)
+LNGRD_API void lngrd_destroy_number(lngrd_Number *number)
 {
     free(number);
 }
 
-static lngrd_String *lngrd_create_string(char *bytes, size_t length)
+LNGRD_API lngrd_String *lngrd_create_string(char *bytes, size_t length)
 {
     lngrd_String *string;
 
@@ -4436,12 +4538,12 @@ static lngrd_String *lngrd_create_string(char *bytes, size_t length)
     return string;
 }
 
-static lngrd_String *lngrd_cstring_to_string(const char *cstring)
+LNGRD_API lngrd_String *lngrd_cstring_to_string(const char *cstring)
 {
     return lngrd_bytes_to_string(cstring, strlen(cstring));
 }
 
-static lngrd_String *lngrd_bytes_to_string(const char *bytes, size_t length)
+LNGRD_API lngrd_String *lngrd_bytes_to_string(const char *bytes, size_t length)
 {
     char *buffer;
 
@@ -4458,7 +4560,7 @@ static lngrd_String *lngrd_bytes_to_string(const char *bytes, size_t length)
     return lngrd_create_string(buffer, length);
 }
 
-static char *lngrd_string_to_cstring(const lngrd_String *string)
+LNGRD_API char *lngrd_string_to_cstring(const lngrd_String *string)
 {
     char *cstring;
 
@@ -4474,7 +4576,7 @@ static char *lngrd_string_to_cstring(const lngrd_String *string)
     return cstring;
 }
 
-static lngrd_SInt lngrd_compare_strings(const lngrd_String *left, const lngrd_String *right)
+LNGRD_API lngrd_SInt lngrd_compare_strings(const lngrd_String *left, const lngrd_String *right)
 {
     size_t index;
 
@@ -4504,7 +4606,7 @@ static lngrd_SInt lngrd_compare_strings(const lngrd_String *left, const lngrd_St
     return 0;
 }
 
-static lngrd_UInt lngrd_hash_string(const lngrd_String *string)
+LNGRD_API lngrd_UInt lngrd_hash_string(const lngrd_String *string)
 {
     lngrd_UInt hash;
     size_t index;
@@ -4519,7 +4621,7 @@ static lngrd_UInt lngrd_hash_string(const lngrd_String *string)
     return hash;
 }
 
-static int lngrd_is_keyword_match(const lngrd_String *string, const char *keyword)
+LNGRD_API int lngrd_is_keyword_match(const lngrd_String *string, const char *keyword)
 {
     size_t index;
 
@@ -4534,7 +4636,7 @@ static int lngrd_is_keyword_match(const lngrd_String *string, const char *keywor
     return index == string->length;
 }
 
-static void lngrd_destroy_string(lngrd_String *string)
+LNGRD_API void lngrd_destroy_string(lngrd_String *string)
 {
     if (string->bytes)
     {
@@ -4544,7 +4646,7 @@ static void lngrd_destroy_string(lngrd_String *string)
     free(string);
 }
 
-static lngrd_List *lngrd_create_list(void)
+LNGRD_API lngrd_List *lngrd_create_list(void)
 {
     lngrd_List *list;
 
@@ -4556,7 +4658,7 @@ static lngrd_List *lngrd_create_list(void)
     return list;
 }
 
-static void lngrd_push_list_item(lngrd_List *list, lngrd_Block *item)
+LNGRD_API void lngrd_push_list_item(lngrd_List *list, lngrd_Block *item)
 {
     if (list->length == list->capacity)
     {
@@ -4579,17 +4681,17 @@ static void lngrd_push_list_item(lngrd_List *list, lngrd_Block *item)
     list->items[list->length++] = item;
 }
 
-static lngrd_Block *lngrd_pop_list_item(lngrd_List *list)
+LNGRD_API lngrd_Block *lngrd_pop_list_item(lngrd_List *list)
 {
     return list->items[--list->length];
 }
 
-static lngrd_Block *lngrd_peek_list_item(lngrd_List *list)
+LNGRD_API lngrd_Block *lngrd_peek_list_item(lngrd_List *list)
 {
     return list->items[list->length - 1];
 }
 
-static lngrd_List *lngrd_copy_list(lngrd_List *list)
+LNGRD_API lngrd_List *lngrd_copy_list(lngrd_List *list)
 {
     lngrd_List *sorted;
     size_t index;
@@ -4608,7 +4710,7 @@ static lngrd_List *lngrd_copy_list(lngrd_List *list)
     return sorted;
 }
 
-static void lngrd_sort_list(lngrd_List *list, lngrd_List *sketches, lngrd_List *doodles)
+LNGRD_API void lngrd_sort_list(lngrd_List *list, lngrd_List *sketches, lngrd_List *doodles)
 {
     size_t cursor, swap;
 
@@ -4637,7 +4739,7 @@ static void lngrd_sort_list(lngrd_List *list, lngrd_List *sketches, lngrd_List *
     }
 }
 
-static void lngrd_burn_list(lngrd_List *list, lngrd_List *pyre)
+LNGRD_API void lngrd_burn_list(lngrd_List *list, lngrd_List *pyre)
 {
     while (list->length > 0)
     {
@@ -4648,7 +4750,7 @@ static void lngrd_burn_list(lngrd_List *list, lngrd_List *pyre)
     free(list);
 }
 
-static lngrd_Map *lngrd_create_map(void)
+LNGRD_API lngrd_Map *lngrd_create_map(void)
 {
     lngrd_Map *map;
     size_t index;
@@ -4666,7 +4768,7 @@ static lngrd_Map *lngrd_create_map(void)
     return map;
 }
 
-static lngrd_Block *lngrd_get_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_List *sketches, lngrd_List *doodles)
+LNGRD_API lngrd_Block *lngrd_get_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_List *sketches, lngrd_List *doodles)
 {
     size_t index, tally;
 
@@ -4703,7 +4805,7 @@ static lngrd_Block *lngrd_get_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_L
     return NULL;
 }
 
-static void lngrd_set_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_Block *block, lngrd_List *pyre, lngrd_List *sketches, lngrd_List *doodles)
+LNGRD_API void lngrd_set_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_Block *block, lngrd_List *pyre, lngrd_List *sketches, lngrd_List *doodles)
 {
     size_t index, tally;
 
@@ -4788,7 +4890,7 @@ static void lngrd_set_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_Block *bl
     }
 }
 
-static void lngrd_unset_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_List *pyre, lngrd_List *sketches, lngrd_List *doodles)
+LNGRD_API void lngrd_unset_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_List *pyre, lngrd_List *sketches, lngrd_List *doodles)
 {
     size_t index, tally;
 
@@ -4827,7 +4929,7 @@ static void lngrd_unset_map_item(lngrd_Map *map, lngrd_Block *key, lngrd_List *p
     }
 }
 
-static void lngrd_burn_map(lngrd_Map *map, lngrd_List *pyre)
+LNGRD_API void lngrd_burn_map(lngrd_Map *map, lngrd_List *pyre)
 {
     size_t index;
 
@@ -4848,7 +4950,7 @@ static void lngrd_burn_map(lngrd_Map *map, lngrd_List *pyre)
     free(map);
 }
 
-static lngrd_Function *lngrd_create_function(void)
+LNGRD_API lngrd_Function *lngrd_create_function(void)
 {
     lngrd_Function *function;
 
@@ -4860,12 +4962,12 @@ static lngrd_Function *lngrd_create_function(void)
     return function;
 }
 
-static lngrd_SInt lngrd_compare_functions(const lngrd_Function *left, const lngrd_Function *right)
+LNGRD_API lngrd_SInt lngrd_compare_functions(const lngrd_Function *left, const lngrd_Function *right)
 {
     return lngrd_compare_strings(left->source, right->source);
 }
 
-static void lngrd_burn_function(lngrd_Function *function, lngrd_List *pyre)
+LNGRD_API void lngrd_burn_function(lngrd_Function *function, lngrd_List *pyre)
 {
     lngrd_burn_list(function->expressions, pyre);
     lngrd_destroy_string(function->source);
@@ -4873,7 +4975,7 @@ static void lngrd_burn_function(lngrd_Function *function, lngrd_List *pyre)
     free(function);
 }
 
-static lngrd_Expression *lngrd_create_expression(lngrd_ExpressionType type, void *form)
+LNGRD_API lngrd_Expression *lngrd_create_expression(lngrd_ExpressionType type, void *form)
 {
     lngrd_Expression *expression;
 
@@ -4884,7 +4986,7 @@ static lngrd_Expression *lngrd_create_expression(lngrd_ExpressionType type, void
     return expression;
 }
 
-static void lngrd_burn_expression(lngrd_Expression *expression, lngrd_List *pyre)
+LNGRD_API void lngrd_burn_expression(lngrd_Expression *expression, lngrd_List *pyre)
 {
     switch (expression->type)
     {
@@ -5062,7 +5164,7 @@ static void lngrd_burn_expression(lngrd_Expression *expression, lngrd_List *pyre
     free(expression);
 }
 
-static lngrd_Plan *lngrd_create_plan(void)
+LNGRD_API lngrd_Plan *lngrd_create_plan(void)
 {
     lngrd_Plan *plan;
 
@@ -5074,7 +5176,7 @@ static lngrd_Plan *lngrd_create_plan(void)
     return plan;
 }
 
-static void lngrd_push_plan_action(lngrd_Plan *plan, lngrd_Action action)
+LNGRD_API void lngrd_push_plan_action(lngrd_Plan *plan, lngrd_Action action)
 {
     if (plan->length == plan->capacity)
     {
@@ -5097,23 +5199,23 @@ static void lngrd_push_plan_action(lngrd_Plan *plan, lngrd_Action action)
     plan->actions[plan->length++] = action;
 }
 
-static lngrd_Action lngrd_pop_plan_action(lngrd_Plan *plan)
+LNGRD_API lngrd_Action lngrd_pop_plan_action(lngrd_Plan *plan)
 {
     return plan->actions[--plan->length];
 }
 
-static lngrd_Action lngrd_peek_plan_action(lngrd_Plan *plan)
+LNGRD_API lngrd_Action lngrd_peek_plan_action(lngrd_Plan *plan)
 {
     return plan->actions[plan->length - 1];
 }
 
-static void lngrd_destroy_plan(lngrd_Plan *plan)
+LNGRD_API void lngrd_destroy_plan(lngrd_Plan *plan)
 {
     free(plan->actions);
     free(plan);
 }
 
-static lngrd_Action lngrd_prepare_simple_action(lngrd_Block *single, lngrd_UInt checkpoint, lngrd_UInt capacity)
+LNGRD_API lngrd_Action lngrd_prepare_simple_action(lngrd_Block *single, lngrd_UInt checkpoint, lngrd_UInt capacity)
 {
     lngrd_Action action;
 
@@ -5129,7 +5231,7 @@ static lngrd_Action lngrd_prepare_simple_action(lngrd_Block *single, lngrd_UInt 
     return action;
 }
 
-static lngrd_Action lngrd_prepare_general_action(lngrd_List *expressions, lngrd_UInt ownership, lngrd_UInt checkpoint, lngrd_UInt capacity)
+LNGRD_API lngrd_Action lngrd_prepare_general_action(lngrd_List *expressions, lngrd_UInt ownership, lngrd_UInt checkpoint, lngrd_UInt capacity)
 {
     lngrd_Action action;
 
@@ -5145,7 +5247,7 @@ static lngrd_Action lngrd_prepare_general_action(lngrd_List *expressions, lngrd_
     return action;
 }
 
-static void lngrd_start_buffer(lngrd_Buffer *buffer)
+LNGRD_API void lngrd_start_buffer(lngrd_Buffer *buffer)
 {
     size_t capacity;
 
@@ -5155,7 +5257,7 @@ static void lngrd_start_buffer(lngrd_Buffer *buffer)
     buffer->capacity = capacity;
 }
 
-static int lngrd_append_buffer_bytes(lngrd_Buffer *buffer, const lngrd_String *string)
+LNGRD_API int lngrd_append_buffer_bytes(lngrd_Buffer *buffer, const lngrd_String *string)
 {
     int resize;
 
@@ -5200,7 +5302,7 @@ static int lngrd_append_buffer_bytes(lngrd_Buffer *buffer, const lngrd_String *s
     return 1;
 }
 
-static lngrd_String *lngrd_buffer_to_string(lngrd_Buffer *buffer)
+LNGRD_API lngrd_String *lngrd_buffer_to_string(lngrd_Buffer *buffer)
 {
     lngrd_String *string;
 
@@ -5220,17 +5322,17 @@ static lngrd_String *lngrd_buffer_to_string(lngrd_Buffer *buffer)
     return string;
 }
 
-static void lngrd_abandon_buffer(lngrd_Buffer *buffer)
+LNGRD_API void lngrd_abandon_buffer(lngrd_Buffer *buffer)
 {
     free(buffer->bytes);
 }
 
-static int lngrd_can_fit_both(size_t left, size_t right)
+LNGRD_API int lngrd_can_fit_both(size_t left, size_t right)
 {
     return (left + right) >= left;
 }
 
-static void *lngrd_allocate(size_t number, size_t size)
+LNGRD_API void *lngrd_allocate(size_t number, size_t size)
 {
     void *memory;
 
@@ -5254,7 +5356,7 @@ static void *lngrd_allocate(size_t number, size_t size)
     return memory;
 }
 
-static void *lngrd_reallocate(void *memory, size_t number, size_t size)
+LNGRD_API void *lngrd_reallocate(void *memory, size_t number, size_t size)
 {
     if (number == 0 || size == 0)
     {
@@ -5276,7 +5378,7 @@ static void *lngrd_reallocate(void *memory, size_t number, size_t size)
     return memory;
 }
 
-static void lngrd_crash_with_message(const char *message)
+LNGRD_API void lngrd_crash_with_message(const char *message)
 {
     fprintf(stderr, "%s\n", message);
     exit(1);
