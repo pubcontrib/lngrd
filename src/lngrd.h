@@ -4383,7 +4383,7 @@ LNGRD_API lngrd_Number *lngrd_create_number(lngrd_NumberLayout layout, lngrd_SIn
 
 LNGRD_API int lngrd_string_to_number(const lngrd_String *string, lngrd_Number **result)
 {
-    static lngrd_UInt ten_to[] = {1UL, 10UL, 100UL, 1000UL, 10000UL, 100000UL, 1000000UL, 10000000UL, 100000000UL, 1000000000UL};
+    static lngrd_UInt tenTo[] = {1UL, 10UL, 100UL, 1000UL, 10000UL, 100000UL, 1000000UL, 10000000UL, 100000000UL, 1000000000UL};
     lngrd_SInt value;
     lngrd_UInt numeric;
     int negative;
@@ -4420,7 +4420,7 @@ LNGRD_API int lngrd_string_to_number(const lngrd_String *string, lngrd_Number **
         unsigned char digit;
 
         digit = string->bytes[index];
-        numeric += (digit - '0') * ten_to[place];
+        numeric += (digit - '0') * tenTo[place];
 
         if (numeric > LNGRD_INT_LIMIT)
         {
