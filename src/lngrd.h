@@ -2,6 +2,13 @@
 #define LNGRD_H
 
 /*
+ * lngrd.h: reference implementation of lngrd programming language composed as a
+ * header-only ANSI C library
+ *
+ * wareification is the original author
+ */
+
+/*
  * This is free and unencumbered software released into the public domain.
  *
  * Anyone is free to copy, modify, publish, use, compile, sell, or
